@@ -30,7 +30,6 @@ public partial class App : Application
     protected override async void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
-        //D4__U-tozguvtHsQLNHEl09SXagU1WVK
         
         //Configuración
         _config = GetConfig("Datos/config.json");
