@@ -1,4 +1,5 @@
-﻿using NetWorkLibrery.Interfazes;
+﻿using System.Collections.Generic;
+using NetWorkLibrery.Interfazes;
 using NetWorkLibrery.Modelos;
 using PhotonPackageParser;
 using RequipAlbion.Network.Model;
