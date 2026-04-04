@@ -19,7 +19,7 @@ public sealed class MessageService : IDisposable
     private readonly IDiscordAudioSink _audioSink;
     private readonly IWavToPcmConverter _wavConverter;
 
-    private string? _registeredUser;
+    private string? _registeredUser = "crygeo";
 
     public MessageService(
         ICommandParser commandParser,
@@ -44,8 +44,11 @@ public sealed class MessageService : IDisposable
         var wav = await _ttsEngine.SynthesizeAsync(payload);
         if (wav.Length == 0) return;
 
+        var bytes = await File.ReadAllBytesAsync("sample/file.wav");
+        using var audioStream = new MemoryStream(bytes);
+        
         // Abrir archivo como stream (lazy, eficiente)
-        var pcm = _wavConverter.Convert(wav);
+        var pcm = _wavConverter.Convert(bytes);
         await _audioSink.SendAsync(pcm);
     }
 

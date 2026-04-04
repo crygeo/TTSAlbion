@@ -41,7 +41,7 @@ public sealed class DiscordAudioSink : IDiscordAudioSink, IAsyncDisposable
         var guild = _client.GetGuild(_guildId);
         var channel = guild.GetVoiceChannel(_voiceChannelId);
         _audioClient = await channel.ConnectAsync();
-        _outStream = _audioClient.CreateDirectOpusStream();
+        _outStream = _audioClient.CreatePCMStream(AudioApplication.Voice);
         return _outStream;
     }
 

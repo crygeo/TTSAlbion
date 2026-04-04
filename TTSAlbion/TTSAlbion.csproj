@@ -6,7 +6,8 @@
 		<UseWPF>true</UseWPF>
 		<Nullable>enable</Nullable>
 		<ImplicitUsings>enable</ImplicitUsings>
-		<PlatformTarget>x64</PlatformTarget>  <!-- ← AÑADE ESTO -->
+		<PlatformTarget>x64</PlatformTarget> 
+		<ApplicationManifest>app.manifest</ApplicationManifest>
 
 	</PropertyGroup>
 
@@ -17,6 +18,7 @@
 	<ItemGroup>
 	  <PackageReference Include="Concentus" Version="2.2.2" />
 	  <PackageReference Include="Discord.Net" Version="3.19.1" />
+	  <PackageReference Include="Newtonsoft.Json" Version="13.0.5-beta1" />
 	  <PackageReference Include="PhotonPackageParser" Version="4.1.0" />
 	  <PackageReference Include="System.Speech" Version="11.0.0-preview.2.26159.112" />
 	</ItemGroup>
@@ -27,6 +29,9 @@
 
 	<ItemGroup>
 	  <None Update="sample\file.wav">
+	    <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+	  </None>
+	  <None Update="Datos\config.json">
 	    <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 	  </None>
 	</ItemGroup>
