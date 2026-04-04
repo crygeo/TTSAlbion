@@ -59,8 +59,8 @@ public partial class App : Application
 
         // --- Servicios de audio ---
         ITtsEngine ttsEngine = new WindowsTtsEngine();
-        var wavConverter = new WavToPcmConverter(0);
-
+// App.xaml.cs — reemplaza la línea del converter
+IWavToPcmConverter wavConverter = new ResamplingWavToPcmConverter(48000, 16, 2);
         IAudioSink audioSink = new DiscordAudioSink(discordClient, config.GuildId, config.VoiceChannelId);
         //IAudioSink audioSink = new LocalAudioSink (); // Para pruebas sin Discord, escribe PCM a disco
 

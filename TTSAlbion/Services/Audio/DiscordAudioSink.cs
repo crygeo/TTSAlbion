@@ -28,22 +28,23 @@ public sealed class DiscordAudioSink : IAudioSink, IAsyncDisposable
     /// Envía un buffer PCM completo (WAV convertido) al canal de voz,
     /// fragmentando automáticamente en frames de 20ms.
     /// </summary>
+    // Versión más correcta: deja que el buffer de Discord maneje el timing
     public async Task SendAsync(byte[] pcm, CancellationToken ct = default)
     {
         var stream = await GetOrConnectAsync(ct);
-
-        // Fragmenta en frames internamente (solo Discord necesita esto)
+    
+        // Discord.Net AudioOutStream ya tiene buffering interno de 200ms (bufferMillis)
+        // WriteAsync es non-blocking hasta que el buffer se llena — no necesitas Delay manual
         int offset = 0;
         while (offset < pcm.Length)
         {
-            var frame = new byte[FrameSize];
             int remaining = Math.Min(FrameSize, pcm.Length - offset);
-            Buffer.BlockCopy(pcm, offset, frame, 0, remaining);
+            await stream.WriteAsync(pcm.AsMemory(offset, remaining), ct);
             offset += remaining;
-
-            await stream.WriteAsync(frame, ct).ConfigureAwait(false);
-            await Task.Delay(20, ct).ConfigureAwait(false);
         }
+    
+        // Flush explícito al terminar el utterance
+        await stream.FlushAsync(ct);
     }
 
     /// <summary>

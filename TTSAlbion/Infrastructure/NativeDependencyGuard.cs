@@ -11,11 +11,11 @@ namespace TTSAlbion.Infrastructure;
 public static class NativeDependencyGuard
 {
     [DllImport("opus", EntryPoint = "opus_get_version_string",
-        CallingConvention = CallingConvention.Cdecl)]
+               CallingConvention = CallingConvention.Cdecl)]
     private static extern IntPtr OpusVersionString();
 
     [DllImport("libsodium", EntryPoint = "sodium_version_string",
-        CallingConvention = CallingConvention.Cdecl)]
+               CallingConvention = CallingConvention.Cdecl)]
     private static extern IntPtr SodiumVersionString();
 
     public static void Verify()
