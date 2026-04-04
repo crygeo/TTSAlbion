@@ -28,46 +28,28 @@ public partial class App : Application
     {
         base.OnStartup(e);
 
-        NativeDependencyGuard.Verify(); // ← falla rápido con mensaje claro
+        NativeDependencyGuard.Verify();
 
 
         // --- Config ---
         var config = LoadConfig("Datos/config.json");
 
         // --- Discord ---
-        var discordClient = new DiscordSocketClient(new DiscordSocketConfig
-        {
-            GatewayIntents = GatewayIntents.Guilds | GatewayIntents.GuildVoiceStates,
-            // Importante: evita que el gateway use el SynchronizationContext de WPF
-            DefaultRetryMode = RetryMode.AlwaysRetry,
-            EnableVoiceDaveEncryption = true
-        });
-
-        var readyTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        discordClient.Ready += () =>
-        {
-            readyTcs.TrySetResult();
-            return Task.CompletedTask;
-        };
-
-        
-        await discordClient.LoginAsync(TokenType.Bot, config.Token);
-        await discordClient.StartAsync();
+        var discordClient = await GetDiscordClient(config);
 
         // Espera real al evento Ready con timeout de seguridad
-        await Task.WhenAny(readyTcs.Task, Task.Delay(TimeSpan.FromSeconds(15)));
+        
 
         // --- Servicios de audio ---
         ITtsEngine ttsEngine = new WindowsTtsEngine();
-// App.xaml.cs — reemplaza la línea del converter
-IWavToPcmConverter wavConverter = new ResamplingWavToPcmConverter(48000, 16, 2);
-        IAudioSink audioSink = new DiscordAudioSink(discordClient, config.GuildId, config.VoiceChannelId);
-        //IAudioSink audioSink = new LocalAudioSink (); // Para pruebas sin Discord, escribe PCM a disco
+        IWavToPcmConverter wavConverter = new WavToPcmConverter(1);
+        IAudioSink audioSink = new VirtualMicAudioSink();
+
+
 
         // --- Abstracciones para el ViewModel ---
         IManualTtsCommand manualTts = new ManualTtsCommand(ttsEngine, wavConverter, audioSink);
-        IDiscordInfoProvider discordInfo =
-            new DiscordInfoProvider(discordClient, config.GuildId, config.VoiceChannelId);
+        IDiscordInfoProvider discordInfo = new DiscordInfoProvider(discordClient, config.GuildId, config.VoiceChannelId);
 
         // --- ViewModel ---
         var viewModel = new MainViewModel(manualTts, discordInfo);
@@ -113,5 +95,31 @@ IWavToPcmConverter wavConverter = new ResamplingWavToPcmConverter(48000, 16, 2);
     {
         _networkManager?.Stop();
         base.OnExit(e);
+    }
+
+    private async Task<DiscordSocketClient> GetDiscordClient(Config config)
+    {
+        var discordClient = new DiscordSocketClient(new DiscordSocketConfig
+        {
+            GatewayIntents = GatewayIntents.Guilds | GatewayIntents.GuildVoiceStates,
+            // Importante: evita que el gateway use el SynchronizationContext de WPF
+            DefaultRetryMode = RetryMode.AlwaysRetry,
+            EnableVoiceDaveEncryption = true
+        });
+
+        var readyTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        discordClient.Ready += () =>
+        {
+            readyTcs.TrySetResult();
+            return Task.CompletedTask;
+        };
+
+        
+        await discordClient.LoginAsync(TokenType.Bot, config.Token);
+        await discordClient.StartAsync();
+        
+        await Task.WhenAny(readyTcs.Task, Task.Delay(TimeSpan.FromSeconds(15)));
+        
+        return discordClient;
     }
 }

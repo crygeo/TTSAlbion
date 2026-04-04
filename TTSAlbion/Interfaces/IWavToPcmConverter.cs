@@ -12,7 +12,6 @@ public interface IWavToPcmConverter
 }
 
 // TTSAlbion/Services/Audio/WavToPcmConverter.cs
-[Obsolete("Use ConvertToFrames for streaming conversion instead.")]
 public sealed class WavToPcmConverter : IWavToPcmConverter
 {
     private const int WavHeaderSize = 44; // estándar PCM WAV

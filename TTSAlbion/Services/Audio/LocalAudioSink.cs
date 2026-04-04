@@ -6,38 +6,32 @@ using TTSAlbion.Interfaces;
 
 public sealed class LocalAudioSink : IAudioSink, IDisposable
 {
-    private readonly WaveOutEvent _output;
+    private readonly WaveOutEvent _output = new();
     private readonly BufferedWaveProvider _buffer;
 
-    public LocalAudioSink()
+    // Acepta el formato real de SAPI en lugar de hardcodear Discord
+    public LocalAudioSink(WaveFormat? format = null)
     {
-        var format = new WaveFormat(48000, 16, 2); // Discord-compatible PCM
-
-        _buffer = new BufferedWaveProvider(format)
+        var waveFormat = format ?? new WaveFormat(16000, 16, 1); // SAPI default
+        _buffer = new BufferedWaveProvider(waveFormat)
         {
             DiscardOnBufferOverflow = true
         };
-
-        _output = new WaveOutEvent();
         _output.Init(_buffer);
         _output.Play();
     }
 
-    public Task SendAsync(byte[] pcm, CancellationToken ct)
+    public Task SendAsync(byte[] pcm, CancellationToken ct = default)
     {
-        if (pcm == null || pcm.Length == 0)
-            return Task.CompletedTask;
-        
-        _buffer.AddSamples(pcm, 0, pcm.Length);
+        if (pcm is { Length: > 0 })
+            _buffer.AddSamples(pcm, 0, pcm.Length);
         return Task.CompletedTask;
     }
 
     public void Dispose()
     {
-        _output?.Stop();
-        _output?.Dispose();
+        _output.Stop();
+        _output.Dispose();
     }
-    
-    
 }
 
