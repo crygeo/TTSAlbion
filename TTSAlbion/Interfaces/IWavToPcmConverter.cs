@@ -28,6 +28,7 @@ public sealed class WavToPcmConverter : IWavToPcmConverter
         
         switch (_fistConvert)
         {
+            case 0: converter = wav; break;
             case 1: converter = Convert1(wav); break;
             case 2: converter = Convert2(wav); break;
             default: throw new InvalidOperationException("Invalid conversion method.");
@@ -64,5 +65,31 @@ public sealed class WavToPcmConverter : IWavToPcmConverter
         }
 
         return pcmStream.ToArray();
+    }
+    
+    private const int FrameSize = 3840;
+
+    public static async IAsyncEnumerable<byte[]> ConvertToFrames(byte[] wav)
+    {
+        using var ms = new MemoryStream(wav);
+        using var reader = new WaveFileReader(ms);
+
+        var targetFormat = new WaveFormat(48000, 16, 2);
+        using var resampler = new MediaFoundationResampler(reader, targetFormat);
+
+        var buffer = new byte[FrameSize];
+
+        int read;
+        while ((read = resampler.Read(buffer, 0, buffer.Length)) > 0)
+        {
+            if (read < FrameSize)
+            {
+                // padding final
+                Array.Clear(buffer, read, FrameSize - read);
+            }
+
+            yield return buffer.ToArray();
+            await Task.Yield(); // evita bloqueo
+        }
     }
 }

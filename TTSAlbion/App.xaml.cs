@@ -10,6 +10,7 @@ using TTSAlbion.Albion.Handler.Request;
 using TTSAlbion.Albion.Handler.Response;
 using TTSAlbion.Converters;
 using TTSAlbion.Datos;
+using TTSAlbion.Infrastructure;
 using TTSAlbion.Interfaces;
 using TTSAlbion.Services;
 using TTSAlbion.Services.Audio;
@@ -26,39 +27,57 @@ public partial class App : Application
     {
         base.OnStartup(e);
 
+        NativeDependencyGuard.Verify(); // ← falla rápido con mensaje claro
+
+
         // --- Config ---
         var config = LoadConfig("Datos/config.json");
 
         // --- Discord ---
-        var discordClient = new DiscordSocketClient();
+        var discordClient = new DiscordSocketClient(new DiscordSocketConfig
+        {
+            GatewayIntents = GatewayIntents.Guilds | GatewayIntents.GuildVoiceStates,
+            // Importante: evita que el gateway use el SynchronizationContext de WPF
+            DefaultRetryMode = RetryMode.AlwaysRetry
+        });
+
+        var readyTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        discordClient.Ready += () =>
+        {
+            readyTcs.TrySetResult();
+            return Task.CompletedTask;
+        };
+
+        
         await discordClient.LoginAsync(TokenType.Bot, config.Token);
         await discordClient.StartAsync();
 
-        // Espera mínima para que el cliente resuelva guilds/channels
-        await Task.Delay(2000);
+        // Espera real al evento Ready con timeout de seguridad
+        await Task.WhenAny(readyTcs.Task, Task.Delay(TimeSpan.FromSeconds(15)));
 
         // --- Servicios de audio ---
-        ITtsEngine    ttsEngine   = new WindowsTtsEngine();
-        var wavConverter          = new WavToPcmConverter(2);
-        
-        //IAudioSink audioSink = new DiscordAudioSink(discordClient, config.GuildId, config.VoiceChannelId);
-        IAudioSink audioSink = new LocalAudioSink (); // Para pruebas sin Discord, escribe PCM a disco
+        ITtsEngine ttsEngine = new WindowsTtsEngine();
+        var wavConverter = new WavToPcmConverter(0);
+
+        IAudioSink audioSink = new DiscordAudioSink(discordClient, config.GuildId, config.VoiceChannelId);
+        //IAudioSink audioSink = new LocalAudioSink (); // Para pruebas sin Discord, escribe PCM a disco
 
         // --- Abstracciones para el ViewModel ---
-        IManualTtsCommand  manualTts   = new ManualTtsCommand(ttsEngine, wavConverter, audioSink);
-        IDiscordInfoProvider discordInfo = new DiscordInfoProvider(discordClient, config.GuildId, config.VoiceChannelId);
+        IManualTtsCommand manualTts = new ManualTtsCommand(ttsEngine, wavConverter, audioSink);
+        IDiscordInfoProvider discordInfo =
+            new DiscordInfoProvider(discordClient, config.GuildId, config.VoiceChannelId);
 
         // --- ViewModel ---
         var viewModel = new MainViewModel(manualTts, discordInfo);
 
         // --- MessageService: usa el mismo pipeline, actualiza el VM cuando detecta usuario ---
-        var commandParser  = new CommandParser(config.Prefix);
+        var commandParser = new CommandParser(config.Prefix);
         var messageService = new MessageService(commandParser, ttsEngine, wavConverter, audioSink);
 
         // --- Red Albion ---
-        var resolver   = new AlbionPortResolver(config.PathAlbion);
+        var resolver = new AlbionPortResolver(config.PathAlbion);
         var portFilter = new ResolvedPortFilter(resolver, TimeSpan.FromSeconds(15));
-        var parser     = new AlbionParser();
+        var parser = new AlbionParser();
 
         // GenericEventHandler notifica al ViewModel cuando detecta el usuario
         var eventHandler = new GenericEventHandler(messageService, username => viewModel.SetRegisteredUser(username));

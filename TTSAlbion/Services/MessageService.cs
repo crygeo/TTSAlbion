@@ -19,7 +19,7 @@ public sealed class MessageService : IDisposable
     private readonly IAudioSink _audioSink;
     private readonly IWavToPcmConverter _wavConverter;
 
-    private string? _registeredUser;
+    private string? _registeredUser = "CryGeo";
 
     public MessageService(
         ICommandParser commandParser,

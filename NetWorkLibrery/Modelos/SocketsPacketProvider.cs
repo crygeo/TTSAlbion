@@ -139,7 +139,7 @@ public class SocketsPacketProvider : PacketProvider
 
     public override void Stop()
     {
-        throw new NotImplementedException();
+        
     }
 
     private void ProcessReceivedData(Socket socket, byte[] data)
