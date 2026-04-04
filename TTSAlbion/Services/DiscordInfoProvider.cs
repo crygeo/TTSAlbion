@@ -36,23 +36,25 @@ public sealed class ManualTtsCommand : IManualTtsCommand, IDisposable
     private readonly IWavToPcmConverter _wavConverter;
     private readonly IAudioSink _audioSink;
 
-    public ManualTtsCommand(
-        ITtsEngine ttsEngine,
-        IWavToPcmConverter wavConverter,
-        IAudioSink audioSink)
+    public ManualTtsCommand(ITtsEngine ttsEngine, IWavToPcmConverter wavConverter, IAudioSink audioSink)
     {
-        _ttsEngine    = ttsEngine    ?? throw new ArgumentNullException(nameof(ttsEngine));
+        _ttsEngine = ttsEngine ?? throw new ArgumentNullException(nameof(ttsEngine));
         _wavConverter = wavConverter ?? throw new ArgumentNullException(nameof(wavConverter));
-        _audioSink    = audioSink    ?? throw new ArgumentNullException(nameof(audioSink));
+        _audioSink = audioSink ?? throw new ArgumentNullException(nameof(audioSink));
     }
 
     public async Task SpeakAsync(string text, CancellationToken ct = default)
     {
-        var wav = await _ttsEngine.SynthesizeAsync(text, ct);
+        if (string.IsNullOrWhiteSpace(text))
+            return;
+
+        var wav = await _ttsEngine.SynthesizeAsync(text, ct).ConfigureAwait(false);
         if (wav.Length == 0) return;
 
         var pcm = _wavConverter.Convert(wav);
-        await _audioSink.SendAsync(pcm, ct);
+
+        // Envío a sink tal cual, sin preocuparse de frames
+        await _audioSink.SendAsync(pcm, ct).ConfigureAwait(false);
     }
 
     public void Dispose()

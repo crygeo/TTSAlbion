@@ -113,37 +113,53 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
 
     private async Task ExecuteSpeakAsync()
     {
-        var text = ManualText.Trim();
-        if (text.Length == 0) return;
+        var text = ManualText?.Trim();
+        if (string.IsNullOrEmpty(text)) return;
 
         IsSending = true;
         FeedbackMessage = null;
 
         try
         {
+            // Llamada asíncrona genérica al TTS + sink
             await _manualTts.SpeakAsync(text);
+
             IsFeedbackError = false;
-            FeedbackMessage = "Enviado al canal de voz.";
+            FeedbackMessage = "Enviado correctamente.";
             ManualText = string.Empty;
+        }
+        catch (OperationCanceledException)
+        {
+            // Cancelación limpia
+            IsFeedbackError = true;
+            FeedbackMessage = "Envío cancelado.";
         }
         catch (Exception ex)
         {
             IsFeedbackError = true;
-            FeedbackMessage = $"Error: {ex.Message}";
-            Console.WriteLine($"Error al enviar TTS: {ex}");
+            FeedbackMessage = "Error al enviar TTS";
+            Console.WriteLine($"Error en ExecuteSpeakAsync: {ex}");
         }
         finally
         {
             IsSending = false;
-            // Limpia el feedback tras 3 segundos sin bloquear el hilo UI
+
+            // Limpia feedback tras 3 segundos sin bloquear UI
             _ = ClearFeedbackAfterAsync(TimeSpan.FromSeconds(3));
         }
     }
 
     private async Task ClearFeedbackAfterAsync(TimeSpan delay)
     {
-        await Task.Delay(delay);
-        FeedbackMessage = null;
+        try
+        {
+            await Task.Delay(delay);
+            FeedbackMessage = null;
+        }
+        catch
+        {
+            // ignorar errores de cancelación
+        }
     }
 
     // --- INotifyPropertyChanged ---

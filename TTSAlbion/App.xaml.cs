@@ -1,5 +1,6 @@
 ﻿using System.Windows;
 using Discord;
+using Discord.Audio;
 using Discord.WebSocket;
 using NetWorkLibrery.Interfazes;
 using NetWorkLibrery.Modelos;
@@ -38,7 +39,8 @@ public partial class App : Application
         {
             GatewayIntents = GatewayIntents.Guilds | GatewayIntents.GuildVoiceStates,
             // Importante: evita que el gateway use el SynchronizationContext de WPF
-            DefaultRetryMode = RetryMode.AlwaysRetry
+            DefaultRetryMode = RetryMode.AlwaysRetry,
+            EnableVoiceDaveEncryption = true
         });
 
         var readyTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
