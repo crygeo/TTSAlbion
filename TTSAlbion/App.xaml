@@ -2,8 +2,41 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:local="clr-namespace:TTSAlbion"
-             StartupUri="MainWindow.xaml">
+             xmlns:util="clr-namespace:Utilidades.Converters"
+             >
+
     <Application.Resources>
-         
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+
+                <!-- MahApps.Metro base -->
+                <ResourceDictionary Source="pack://application:,,,/MahApps.Metro;component/Styles/Controls.xaml"/>
+                <ResourceDictionary Source="pack://application:,,,/MahApps.Metro;component/Styles/Fonts.xaml"/>
+
+                <!-- Tema: Dark + acento morado (puedes cambiar a Light y a cualquier color) -->
+                <ResourceDictionary Source="pack://application:,,,/MahApps.Metro;component/Styles/Themes/Dark.Purple.xaml"/>
+
+                <!-- Material Design controles base.
+                     El tema Dark y la paleta se aplican por código en App.xaml.cs
+                     con ThemeManager, evitando rutas internas de MaterialDesignColors
+                     que cambian entre versiones del paquete. -->
+                <ResourceDictionary Source="pack://application:,,,/MaterialDesignThemes.Wpf;component/Themes/MaterialDesign2.Defaults.xaml"/>
+
+                <!-- Compatibility layer Material + MahApps -->
+                <ResourceDictionary Source="pack://application:,,,/MaterialDesignThemes.MahApps;component/Themes/MaterialDesignTheme.MahApps.Defaults.xaml"/>
+
+                <!-- Converters compartidos -->
+                <ResourceDictionary>
+                    <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
+
+                    <!-- Inverse: True → Collapsed, False → Visible -->
+                    <util:InverseBooleanToVisibilityConverter x:Key="InverseBoolToVisConv"/>
+
+                    <!-- Null → False, any string → True -->
+                    <util:NullToBoolConverter x:Key="NullToBoolConv"/>
+                </ResourceDictionary>
+
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
     </Application.Resources>
 </Application>

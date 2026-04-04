@@ -1,6 +1,4 @@
-﻿using System.Configuration;
-using System.Data;
-using System.Windows;
+﻿using System.Windows;
 using Discord;
 using Discord.WebSocket;
 using NetWorkLibrery.Interfazes;
@@ -16,66 +14,82 @@ using TTSAlbion.Interfaces;
 using TTSAlbion.Services;
 using TTSAlbion.Services.Audio;
 using TTSAlbion.Services.Tts;
+using TTSAlbion.ViewModels;
 
 namespace TTSAlbion;
 
-/// <summary>
-/// Interaction logic for App.xaml
-/// </summary>
 public partial class App : Application
 {
-    private NetworkManager _networkManager;
-    private Config _config;
-    
+    private NetworkManager? _networkManager;
+
     protected override async void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
-        
-        //Configuración
-        _config = GetConfig("Datos/config.json");
-        
-        
-        // Discord setup
+
+        // --- Config ---
+        var config = LoadConfig("Datos/config.json");
+
+        // --- Discord ---
         var discordClient = new DiscordSocketClient();
-        
-        await discordClient.LoginAsync(TokenType.Bot, _config.Token);
+        await discordClient.LoginAsync(TokenType.Bot, config.Token);
         await discordClient.StartAsync();
 
-        // Composición del pipeline — todo por interfaz, fácil de mockear en tests
-        var commandParser = new CommandParser(_config.Prefix);
-        var ttsEngine     = new WindowsTtsEngine();
-        var wavConverter  = new WavToPcmConverter();
-        var audioSink     = new DiscordAudioSink(discordClient, guildId: _config.GuildId, voiceChannelId: _config.VoiceChannelId);
+        // Espera mínima para que el cliente resuelva guilds/channels
+        await Task.Delay(2000);
 
+        // --- Servicios de audio ---
+        ITtsEngine    ttsEngine   = new WindowsTtsEngine();
+        var wavConverter          = new WavToPcmConverter();
+        IDiscordAudioSink audioSink = new DiscordAudioSink(discordClient, config.GuildId, config.VoiceChannelId);
+
+        // --- Abstracciones para el ViewModel ---
+        IManualTtsCommand  manualTts   = new ManualTtsCommand(ttsEngine, wavConverter, audioSink);
+        IDiscordInfoProvider discordInfo = new DiscordInfoProvider(discordClient, config.GuildId, config.VoiceChannelId);
+
+        // --- ViewModel ---
+        var viewModel = new MainViewModel(manualTts, discordInfo);
+
+        // --- MessageService: usa el mismo pipeline, actualiza el VM cuando detecta usuario ---
+        var commandParser  = new CommandParser(config.Prefix);
         var messageService = new MessageService(commandParser, ttsEngine, wavConverter, audioSink);
 
-        // Albion network stack
-        var resolver   = new AlbionPortResolver(@_config.PathAlbion);
-        var portFilter = new ResolvedPortFilter(resolver, cacheTtl: TimeSpan.FromSeconds(15));
+        // --- Red Albion ---
+        var resolver   = new AlbionPortResolver(config.PathAlbion);
+        var portFilter = new ResolvedPortFilter(resolver, TimeSpan.FromSeconds(15));
         var parser     = new AlbionParser();
+
+        // GenericEventHandler notifica al ViewModel cuando detecta el usuario
+        var eventHandler = new GenericEventHandler(messageService,
+            username => viewModel.SetRegisteredUser(username));
 
         _networkManager = new NetworkManager(
             parser,
             new IPacketHandler[]
             {
-                new GenericEventHandler(messageService),  // ← inyectado
+                eventHandler,
                 new GenericRequestHandler(),
                 new GenericResponseHandler()
             },
             portFilter);
 
         _networkManager.Start();
+
+        // --- Ventana principal ---
+        var mainWindow = new MainWindow(viewModel);
+        mainWindow.Show();
     }
 
-    private Config GetConfig(string path)
+    private static Config LoadConfig(string relativePath)
     {
         var fileProvider = new PhysicalFileProvider();
         var pathResolver = new BaseDirectoryPathResolver();
-
-        IJsonDeserializer jsonService = new NewtonsoftJsonDeserializer(fileProvider, pathResolver);
-
-        var data = jsonService.FromFile<Config>(path);
-        return data;
+        IJsonDeserializer json = new NewtonsoftJsonDeserializer(fileProvider, pathResolver);
+        return json.FromFile<Config>(relativePath);
     }
-    
+
+    protected override void OnExit(ExitEventArgs e)
+    {
+        _networkManager?.Stop();
+        base.OnExit(e);
+    }
 }
