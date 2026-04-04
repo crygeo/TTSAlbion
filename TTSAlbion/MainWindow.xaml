@@ -16,15 +16,20 @@
     GlowBrush="{DynamicResource MahApps.Brushes.Accent}"
     TitleCharacterCasing="Normal"
     TitleAlignment="Center"
-    Background="{DynamicResource MahApps.Brushes.ThemeBackground}">
+    Background="{DynamicResource MahApps.Brushes.ThemeBackground}"
+    ShowTitleBar="True"
+    IsWindowDraggable="True"
+    TitleBarHeight="35"
+    >
 
     <ScrollViewer VerticalScrollBarVisibility="Auto"
                   Padding="20,16,20,20">
-        <StackPanel>
+        <StackPanel MouseLeftButtonDown="UIElement_OnMouseLeftButtonDown">
 
             <!-- ══ Jugador ══ -->
             <TextBlock Text="JUGADOR"
                        Style="{StaticResource MaterialDesignOverlineTextBlock}"
+                       FontSize="15"
                        Foreground="{DynamicResource MahApps.Brushes.AccentBase}"
                        Margin="0,0,0,8"/>
 
@@ -112,7 +117,7 @@
                     </Grid>
 
                     <!-- Hint cuando no hay usuario -->
-                    <md:ColorZone Mode="Dark"
+                    <md:ColorZone Mode="Light"
                                   CornerRadius="6"
                                   Padding="10,8"
                                   Margin="0,14,0,0"
@@ -135,6 +140,7 @@
 
             <!-- ══ Discord ══ -->
             <TextBlock Text="DISCORD"
+                       FontSize="15"
                        Style="{StaticResource MaterialDesignOverlineTextBlock}"
                        Foreground="{DynamicResource MahApps.Brushes.AccentBase}"
                        Margin="0,22,0,8"/>
@@ -150,7 +156,7 @@
                         </Grid.ColumnDefinitions>
                         <TextBlock Text="Servidor"
                                    FontSize="12"
-                                   Foreground="{DynamicResource MahApps.Brushes.SystemControlPageTextBaseMediumBrush}"
+                                   Foreground="{DynamicResource MahApps.Brushes.ThemeForeground}"
                                    VerticalAlignment="Center"/>
                         <StackPanel Grid.Column="1" Orientation="Horizontal"
                                     VerticalAlignment="Center">
@@ -175,7 +181,7 @@
                         </Grid.ColumnDefinitions>
                         <TextBlock Text="Canal voz"
                                    FontSize="12"
-                                   Foreground="{DynamicResource MahApps.Brushes.SystemControlPageTextBaseMediumBrush}"
+                                   Foreground="{DynamicResource MahApps.Brushes.ThemeForeground}"
                                    VerticalAlignment="Center"/>
                         <StackPanel Grid.Column="1" Orientation="Horizontal"
                                     VerticalAlignment="Center">
@@ -196,6 +202,7 @@
 
             <!-- ══ TTS Manual ══ -->
             <TextBlock Text="HABLAR MANUALMENTE"
+                       FontSize="15"
                        Style="{StaticResource MaterialDesignOverlineTextBlock}"
                        Foreground="{DynamicResource MahApps.Brushes.AccentBase}"
                        Margin="0,22,0,8"/>
@@ -204,7 +211,7 @@
                 <StackPanel>
 
                     <TextBlock FontSize="12" TextWrapping="Wrap"
-                               Foreground="{DynamicResource MahApps.Brushes.SystemControlPageTextBaseMediumBrush}"
+                               Foreground="{DynamicResource MahApps.Brushes.ThemeForeground}"
                                Margin="0,0,0,12">
                         Envía texto al canal de voz directamente, sin importar si hay un jugador registrado.
                     </TextBlock>
@@ -215,7 +222,7 @@
                              Text="{Binding ManualText, UpdateSourceTrigger=PropertyChanged}"
                              Style="{StaticResource MaterialDesignOutlinedTextBox}"
                              FontSize="14"
-                             Margin="0,0,0,12">
+                             Margin="0,0,0,12" Foreground="{DynamicResource MahApps.Brushes.ThemeForeground}">
                         <TextBox.InputBindings>
                             <KeyBinding Key="Return" Command="{Binding SpeakCommand}"/>
                         </TextBox.InputBindings>

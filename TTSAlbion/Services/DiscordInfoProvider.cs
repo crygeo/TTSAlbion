@@ -34,12 +34,12 @@ public sealed class ManualTtsCommand : IManualTtsCommand, IDisposable
 {
     private readonly ITtsEngine _ttsEngine;
     private readonly IWavToPcmConverter _wavConverter;
-    private readonly IDiscordAudioSink _audioSink;
+    private readonly IAudioSink _audioSink;
 
     public ManualTtsCommand(
         ITtsEngine ttsEngine,
         IWavToPcmConverter wavConverter,
-        IDiscordAudioSink audioSink)
+        IAudioSink audioSink)
     {
         _ttsEngine    = ttsEngine    ?? throw new ArgumentNullException(nameof(ttsEngine));
         _wavConverter = wavConverter ?? throw new ArgumentNullException(nameof(wavConverter));

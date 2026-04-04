@@ -14,7 +14,7 @@
                 <ResourceDictionary Source="pack://application:,,,/MahApps.Metro;component/Styles/Fonts.xaml"/>
 
                 <!-- Tema: Dark + acento morado (puedes cambiar a Light y a cualquier color) -->
-                <ResourceDictionary Source="pack://application:,,,/MahApps.Metro;component/Styles/Themes/Dark.Purple.xaml"/>
+                <ResourceDictionary Source="pack://application:,,,/MahApps.Metro;component/Styles/Themes/dark.cyan.xaml"/>
 
                 <!-- Material Design controles base.
                      El tema Dark y la paleta se aplican por código en App.xaml.cs

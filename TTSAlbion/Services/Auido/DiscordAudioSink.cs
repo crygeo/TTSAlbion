@@ -10,7 +10,7 @@ namespace TTSAlbion.Services.Audio;
 /// Streams PCM audio to a Discord voice channel via Discord.Net.
 /// Handles reconnection and channel acquisition internally.
 /// </summary>
-public sealed class DiscordAudioSink : IDiscordAudioSink, IAsyncDisposable
+public sealed class DiscordAudioSink : IAudioSink, IAsyncDisposable
 {
     private readonly DiscordSocketClient _client;
     private readonly ulong _guildId;

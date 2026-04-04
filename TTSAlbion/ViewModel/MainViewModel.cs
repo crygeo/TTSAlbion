@@ -130,6 +130,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         {
             IsFeedbackError = true;
             FeedbackMessage = $"Error: {ex.Message}";
+            Console.WriteLine($"Error al enviar TTS: {ex}");
         }
         finally
         {

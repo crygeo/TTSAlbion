@@ -39,8 +39,10 @@ public partial class App : Application
 
         // --- Servicios de audio ---
         ITtsEngine    ttsEngine   = new WindowsTtsEngine();
-        var wavConverter          = new WavToPcmConverter();
-        IDiscordAudioSink audioSink = new DiscordAudioSink(discordClient, config.GuildId, config.VoiceChannelId);
+        var wavConverter          = new WavToPcmConverter(2);
+        
+        //IAudioSink audioSink = new DiscordAudioSink(discordClient, config.GuildId, config.VoiceChannelId);
+        IAudioSink audioSink = new LocalAudioSink (); // Para pruebas sin Discord, escribe PCM a disco
 
         // --- Abstracciones para el ViewModel ---
         IManualTtsCommand  manualTts   = new ManualTtsCommand(ttsEngine, wavConverter, audioSink);
@@ -59,8 +61,7 @@ public partial class App : Application
         var parser     = new AlbionParser();
 
         // GenericEventHandler notifica al ViewModel cuando detecta el usuario
-        var eventHandler = new GenericEventHandler(messageService,
-            username => viewModel.SetRegisteredUser(username));
+        var eventHandler = new GenericEventHandler(messageService, username => viewModel.SetRegisteredUser(username));
 
         _networkManager = new NetworkManager(
             parser,
