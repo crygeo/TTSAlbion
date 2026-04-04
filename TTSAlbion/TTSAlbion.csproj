@@ -9,14 +9,15 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <Folder Include="Albion\Handler\Event\Model\" />
       <Folder Include="Albion\Handler\Event\Service\" />
       <Folder Include="Albion\Handler\Request\Model\" />
       <Folder Include="Network\" />
     </ItemGroup>
 
+    
     <ItemGroup>
-      <ProjectReference Include="..\NetWorkLibrery\NetWorkLibrery.csproj" />
+        <PackageReference Include="PhotonPackageParser" Version="4.1.0" />
+        <ProjectReference Include="..\NetWorkLibrery\NetWorkLibrery.csproj" />
     </ItemGroup>
 
 </Project>

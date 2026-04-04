@@ -3,10 +3,9 @@ namespace NetWorkLibrery.Interfazes;
 public interface IPhotonParser
 {
     void AddHandler(IPacketHandler handler);
-    
-    void ReceivePacket(byte[] payload);
-    void OnRequest(byte operationCode, Dictionary<byte, object> parameters);
-    void OnResponse(byte operationCode, short returnCode, string debugMessage, Dictionary<byte, object> parameters);
-    void OnEvent(byte code, Dictionary<byte, object> parameters);
 
+    // ReceivePacket, OnRequest, OnResponse, OnEvent son implementados
+    // por PhotonParser (la clase base) — no se redeclaran aquí para
+    // evitar ambigüedad. Si necesitas el contrato, usa PhotonParser directamente.
+    void ReceivePacket(byte[] payload);
 }

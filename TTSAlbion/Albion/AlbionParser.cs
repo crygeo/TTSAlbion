@@ -1,10 +1,11 @@
 ﻿using NetWorkLibrery.Interfazes;
 using NetWorkLibrery.Modelos;
+using PhotonPackageParser;
 using RequipAlbion.Network.Model;
 
 namespace TTSAlbion.Albion;
 
-public class AlbionParser : IPhotonParser
+public class AlbionParser : PhotonParser, IPhotonParser
 {
     private readonly HandlersCollection _handlers;
 
@@ -13,79 +14,49 @@ public class AlbionParser : IPhotonParser
         _handlers = new HandlersCollection();
     }
 
+    // --- Contrato IPhotonParser ---
+
     public void AddHandler(IPacketHandler handler)
     {
         _handlers.Add(handler);
     }
 
-    public void OnEvent(byte code, Dictionary<byte, object> parameters)
+    // ReceivePacket ya está implementado por PhotonParser — NO la sobreescribas.
+    // PhotonParser la parsea y llama a OnEvent/OnRequest/OnResponse internamente.
+
+    // --- Callbacks de PhotonParser ---
+
+    protected override void OnEvent(byte code, Dictionary<byte, object> parameters)
     {
-        short eventCode = ParseEventCode(parameters);
+        short eventCode = ParseCode(parameters, 252);
+        if (eventCode < 0) return;
 
-        if (eventCode <= -1)
-        {
-            return;
-        }
-
-        var eventPacket = new EventPacket(eventCode, parameters);
-
-        _ = _handlers.HandleAsync(eventPacket);
+        _ = _handlers.HandleAsync(new EventPacket(eventCode, parameters));
     }
 
-    public void ReceivePacket(byte[] payload)
+    protected override void OnRequest(byte operationCode, Dictionary<byte, object> parameters)
     {
-        throw new NotImplementedException();
+        short opCode = ParseCode(parameters, 253);
+        if (opCode < 0) return;
+
+        _ = _handlers.HandleAsync(new RequestPacket(opCode, parameters));
     }
 
-    public void OnRequest(byte operationCodeByte, Dictionary<byte, object> parameters)
+    protected override void OnResponse(byte operationCode, short returnCode, string debugMessage, Dictionary<byte, object> parameters)
     {
-        short operationCode = ParseOperationCode(parameters);
+        short opCode = ParseCode(parameters, 253);
+        if (opCode < 0) return;
 
-        if (operationCode <= -1)
-        {
-            return;
-        }
-
-        var requestPacket = new RequestPacket(operationCode, parameters);
-
-        _ = _handlers.HandleAsync(requestPacket);
+        _ = _handlers.HandleAsync(new ResponsePacket(opCode, parameters));
     }
 
-    public void OnResponse(byte operationCodeByte, short returnCode, string debugMessage, Dictionary<byte, object> parameters)
+    // --- Helpers ---
+
+    private static short ParseCode(Dictionary<byte, object> parameters, byte key)
     {
-        short operationCode = ParseOperationCode(parameters);
-
-        if (operationCode <= -1)
-        {
-            return;
-        }
-
-        var responsePacket = new ResponsePacket(operationCode, parameters);
-
-        _ = _handlers.HandleAsync(responsePacket);
-    }
-
-    private static short ParseEventCode(Dictionary<byte, object> parameters)
-    {
-        if (!parameters.TryGetValue(252, out object value))
-        {
-            // Other values are returned as -1 code.
-            //throw new InvalidOperationException();
+        if (!parameters.TryGetValue(key, out object? value))
             return -1;
-        }
 
-        return (short)value;
-    }
-
-    private static short ParseOperationCode(Dictionary<byte, object> parameters)
-    {
-        if (!parameters.TryGetValue(253, out object value))
-        {
-            // Other values are returned as -1 code.
-            //throw new InvalidOperationException();
-            return -1;
-        }
-
-        return (short)value;
+        return value is short s ? s : (short)-1;
     }
 }

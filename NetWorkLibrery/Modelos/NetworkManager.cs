@@ -1,3 +1,4 @@
+using NetWorkLibrery.Interfaces;
 using NetWorkLibrery.Interfazes;
 
 namespace NetWorkLibrery.Modelos;
@@ -7,9 +8,9 @@ public class NetworkManager : INetworkManager
     private readonly PacketProvider _packetProvider;
     
 
-    public NetworkManager(IPhotonParser parser, IPacketHandler[] handler)
+    public NetworkManager(IPhotonParser parser, IPacketHandler[] handlers, IPortFilter portFilter)
     {
-        _packetProvider = new SocketsPacketProvider(Build(parser, handler));
+        _packetProvider = new SocketsPacketProvider(Build(parser, handlers), portFilter);
     }
 
     private static IPhotonParser Build(IPhotonParser parser, IPacketHandler[]  handlers)

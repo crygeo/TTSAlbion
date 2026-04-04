@@ -3,6 +3,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Reflection;
 using System.Threading.Channels;
+using NetWorkLibrery.Interfaces;
 using NetWorkLibrery.Interfazes;
 
 namespace NetWorkLibrery.Modelos;
@@ -10,6 +11,7 @@ namespace NetWorkLibrery.Modelos;
 public class SocketsPacketProvider : PacketProvider
 {
     private readonly IPhotonParser _photonReceiver;
+    private readonly IPortFilter _portFilter;
     private readonly List<Socket> _sockets = new();
     private readonly List<IPAddress> _gateways = new();
     private byte[] _byteData = new byte[65000];
@@ -17,12 +19,15 @@ public class SocketsPacketProvider : PacketProvider
 
     private readonly Channel<byte[]> _channel = Channel.CreateUnbounded<byte[]>();
 
-    public SocketsPacketProvider(IPhotonParser photonReceiver)
+    public SocketsPacketProvider(IPhotonParser photonReceiver, IPortFilter portFilter)
     {
         _photonReceiver = photonReceiver ?? throw new ArgumentNullException(nameof(photonReceiver));
+        _portFilter = portFilter ?? throw new ArgumentNullException(nameof(portFilter));
+
         var hostEntries = GetAllHostEntries();
         SetGateway(hostEntries);
     }
+
     public override bool IsRunning => _sockets.Any(IsSocketActive);
 
     public override void Start()
@@ -44,16 +49,19 @@ public class SocketsPacketProvider : PacketProvider
             catch (SocketException e)
             {
                 Console.WriteLine(MethodBase.GetCurrentMethod());
-                Console.WriteLine("{message}|{socketErrorCode}", MethodBase.GetCurrentMethod()?.DeclaringType, e.SocketErrorCode);
+                Console.WriteLine("{message}|{socketErrorCode}", MethodBase.GetCurrentMethod()?.DeclaringType,
+                    e.SocketErrorCode);
                 continue;
             }
+
             _ = ProcessLoop(socket); // Start processing loop
             _ = ReceiveDataAsync(socket); // Start receiving data asynchronously
 
             _sockets.Add(socket);
-            Console.WriteLine($"NetworkManager - Added Socket | AddressFamily: {socket.AddressFamily}, LocalEndPoint: {socket.LocalEndPoint}, " +
-                                               $"Connected: {socket.Connected}, Available: {socket.Available}, Blocking: {socket.Blocking}, IsBound: {socket.IsBound}, " +
-                                               $"ReceiveBufferSize: {socket.ReceiveBufferSize}, SendBufferSize: {socket.SendBufferSize}, Ttl: {socket.Ttl}");
+            Console.WriteLine(
+                $"NetworkManager - Added Socket | AddressFamily: {socket.AddressFamily}, LocalEndPoint: {socket.LocalEndPoint}, " +
+                $"Connected: {socket.Connected}, Available: {socket.Available}, Blocking: {socket.Blocking}, IsBound: {socket.IsBound}, " +
+                $"ReceiveBufferSize: {socket.ReceiveBufferSize}, SendBufferSize: {socket.SendBufferSize}, Ttl: {socket.Ttl}");
         }
     }
 
@@ -89,12 +97,14 @@ public class SocketsPacketProvider : PacketProvider
             }
         }
     }
+
     private static bool IsSocketActive(Socket socket)
     {
         bool part1 = socket.Poll(1000, SelectMode.SelectRead);
         bool part2 = (socket.Available == 0);
         return !part1 || !part2;
     }
+
     private async Task ReceiveDataAsync(Socket socket)
     {
         while (!_stopReceiving)
@@ -117,6 +127,7 @@ public class SocketsPacketProvider : PacketProvider
             }
         }
     }
+
     private static IEnumerable<IPHostEntry> GetAllHostEntries()
     {
         List<IPHostEntry> hostEntries = new List<IPHostEntry>();
@@ -125,6 +136,7 @@ public class SocketsPacketProvider : PacketProvider
         hostEntries.Add(hostEntry);
         return hostEntries;
     }
+
     public override void Stop()
     {
         throw new NotImplementedException();
@@ -132,7 +144,6 @@ public class SocketsPacketProvider : PacketProvider
 
     private void ProcessReceivedData(Socket socket, byte[] data)
     {
-
         using MemoryStream buffer = new MemoryStream(data, 0, data.Length);
         using BinaryReader read = new BinaryReader(buffer);
         read.BaseStream.Seek(2, SeekOrigin.Begin);
@@ -151,27 +162,27 @@ public class SocketsPacketProvider : PacketProvider
         string srcPort = ((ushort)IPAddress.NetworkToHostOrder(read.ReadInt16())).ToString();
         string destPort = ((ushort)IPAddress.NetworkToHostOrder(read.ReadInt16())).ToString();
 
-        if (srcPort == "60611" || destPort == "60611")
+        if (!int.TryParse(srcPort, out int src) || !int.TryParse(destPort, out int dst))
+            return;
+
+        if (!_portFilter.Matches(src, dst))
+            return;
+
+        read.BaseStream.Seek(28, SeekOrigin.Begin);
+
+        if (dataLength >= 28)
         {
-            read.BaseStream.Seek(28, SeekOrigin.Begin);
+            byte[] packetData = read.ReadBytes(dataLength - 28);
+            _ = packetData.Reverse();
 
-            if (dataLength >= 28)
+            try
             {
-                byte[] packetData = read.ReadBytes(dataLength - 28);
-                _ = packetData.Reverse();
-
-                try
-                {
-                    _photonReceiver.ReceivePacket(packetData);
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine(MethodBase.GetCurrentMethod()?.DeclaringType);
-                }
+                _photonReceiver.ReceivePacket(packetData);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Error ReceivePacket: " + ex);
             }
         }
     }
-
-
-
 }
