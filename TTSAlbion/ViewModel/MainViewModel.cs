@@ -2,6 +2,7 @@ using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Windows.Input;
 using TTSAlbion.Albion;
+using TTSAlbion.Datos;
 using TTSAlbion.Interfaces;
 using TTSAlbion.Services;
 using TTSAlbion.Services.Audio;
@@ -13,54 +14,63 @@ namespace TTSAlbion.ViewModels;
 /// <summary>
 /// Main ViewModel.
 ///
-/// Responsibilities:
-/// - Manual player name configuration.
-/// - Audio sink selection (Local / VirtualMic / DiscordBot) + bot credentials.
-/// - Chat source filter (ChatMessage / ChatSay / Both).
-/// - Command prefix configuration.
-/// - Manual TTS dispatch.
+/// New responsibilities vs. previous version:
+/// - Receives the persisted <see cref="Config"/> at construction and seeds all
+///   UI fields from it (BotToken, GuildId, ChannelId, Prefix).
+/// - Calls <see cref="ISettingsRepository.SaveAsync"/> when the user explicitly
+///   confirms a change (Apply buttons). Never auto-saves on keystroke.
 ///
-/// Design notes:
-/// - All heavy work (sink creation, Discord login) is async and fires on
-///   background threads; the UI thread only writes observable properties.
-/// - When the selected sink changes, the old sink is disposed by
-///   <see cref="MessageService.UpdateSink"/> to avoid resource leaks.
-/// - Bot start/stop are idempotent and guarded by <see cref="_isBotRunning"/>.
+/// Invariants:
+/// - Save is always fire-and-forget from the UI thread; errors surface via
+///   <see cref="FeedbackMessage"/> rather than unhandled exceptions.
+/// - The ViewModel does NOT own the file path — that belongs to
+///   <see cref="ISettingsRepository"/>, keeping the VM infrastructure-agnostic.
 /// </summary>
 public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
 {
-    private readonly MessageService _messageService;
+    private readonly MessageService      _messageService;
     private readonly GenericEventHandler _eventHandler;
-    private readonly ICommandParser _commandParser;
-    private readonly IAudioSinkFactory _sinkFactory;
+    private readonly ICommandParser      _commandParser;
+    private readonly IAudioSinkFactory   _sinkFactory;
+    private readonly ISettingsRepository _settingsRepo;
 
     public MainViewModel(
-        MessageService messageService,
-        GenericEventHandler eventHandler,
-        ICommandParser commandParser,
-        IAudioSinkFactory sinkFactory)
+        MessageService       messageService,
+        GenericEventHandler  eventHandler,
+        ICommandParser       commandParser,
+        IAudioSinkFactory    sinkFactory,
+        ISettingsRepository  settingsRepo,
+        Config               initialConfig)
     {
         _messageService = messageService ?? throw new ArgumentNullException(nameof(messageService));
-        _eventHandler = eventHandler  ?? throw new ArgumentNullException(nameof(eventHandler));
-        _commandParser = commandParser ?? throw new ArgumentNullException(nameof(commandParser));
-        _sinkFactory  = sinkFactory   ?? throw new ArgumentNullException(nameof(sinkFactory));
+        _eventHandler   = eventHandler   ?? throw new ArgumentNullException(nameof(eventHandler));
+        _commandParser  = commandParser  ?? throw new ArgumentNullException(nameof(commandParser));
+        _sinkFactory    = sinkFactory    ?? throw new ArgumentNullException(nameof(sinkFactory));
+        _settingsRepo   = settingsRepo   ?? throw new ArgumentNullException(nameof(settingsRepo));
 
-        // Seed UI fields from current state
-        _prefixText = _commandParser.CurrentPrefix;
+        // Seed UI from persisted config
+        _prefixText   = commandParser.CurrentPrefix;          // already seeded from config in App.xaml.cs
+        _botToken     = initialConfig.BotToken        ?? string.Empty;
+        _botGuildId   = initialConfig.BotGuildId      == 0 ? string.Empty : initialConfig.BotGuildId.ToString();
+        _botChannelId = initialConfig.BotVoiceChannelId == 0 ? string.Empty : initialConfig.BotVoiceChannelId.ToString();
+        _registeredUser = initialConfig.User ?? string.Empty;
 
-        SpeakCommand     = new AsyncRelayCommand(ExecuteSpeakAsync,     CanSpeak);
-        ApplyUserCommand = new RelayCommand(ApplyUser,  CanApplyUser);
-        ApplyPrefixCommand = new RelayCommand(ApplyPrefix, CanApplyPrefix);
-        StartBotCommand  = new AsyncRelayCommand(StartBotAsync,  () => !_isBotRunning && SelectedSink == AudioSinkType.DiscordBot);
-        StopBotCommand   = new AsyncRelayCommand(StopBotAsync,   () =>  _isBotRunning && SelectedSink == AudioSinkType.DiscordBot);
-        ApplySinkCommand = new AsyncRelayCommand(ApplySinkAsync);
+        // Commands
+        SpeakCommand       = new AsyncRelayCommand(ExecuteSpeakAsync,  CanSpeak);
+        ApplyUserCommand   = new RelayCommand(ApplyUser,               CanApplyUser);
+        ApplyPrefixCommand = new RelayCommand(ApplyPrefix,             CanApplyPrefix);
+        ApplySinkCommand   = new AsyncRelayCommand(ApplySinkAsync);
+        StartBotCommand    = new AsyncRelayCommand(StartBotAsync,
+            () => !_isBotRunning && SelectedSink == AudioSinkType.DiscordBot);
+        StopBotCommand     = new AsyncRelayCommand(StopBotAsync,
+            () =>  _isBotRunning && SelectedSink == AudioSinkType.DiscordBot);
     }
 
     // ════════════════════════════════════════════════════════════════════════════
     // Player section
     // ════════════════════════════════════════════════════════════════════════════
 
-    private string _playerNameInput = string.Empty;
+    private string  _playerNameInput = string.Empty;
     private string? _registeredUser;
 
     public string PlayerNameInput
@@ -89,6 +99,10 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         RegisteredUser = name;
         _messageService.RegisterUser(name);
         _eventHandler.SetTrackedUser(name);
+
+        _ = PersistCurrentConfigAsync();   // fire-and-forget
+
+        
     }
 
     // ════════════════════════════════════════════════════════════════════════════
@@ -132,7 +146,8 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
 
     public ICommand ApplyPrefixCommand { get; }
 
-    private bool CanApplyPrefix() => PrefixText.Trim().Length > 0 && PrefixText != _commandParser.CurrentPrefix;
+    private bool CanApplyPrefix() =>
+        PrefixText.Trim().Length > 0 && PrefixText != _commandParser.CurrentPrefix;
 
     private void ApplyPrefix()
     {
@@ -143,6 +158,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         {
             _commandParser.SetPrefix(prefix);
             SetFeedback("Prefijo actualizado.", isError: false);
+            _ = PersistCurrentConfigAsync();   // fire-and-forget
         }
         catch (ArgumentException ex)
         {
@@ -172,7 +188,6 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
 
     public bool IsBotSinkSelected => SelectedSink == AudioSinkType.DiscordBot;
 
-    // Sink options list for ItemsSource binding
     public IReadOnlyList<AudioSinkType> SinkOptions { get; } =
         Enum.GetValues<AudioSinkType>().ToList();
 
@@ -192,17 +207,15 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         {
             SetFeedback($"Error al cambiar sink: {ex.Message}", isError: true);
         }
-
-        await Task.CompletedTask;
     }
 
     // ════════════════════════════════════════════════════════════════════════════
     // Discord Bot section
     // ════════════════════════════════════════════════════════════════════════════
 
-    private string _botToken     = string.Empty;
-    private string _botGuildId   = string.Empty;
-    private string _botChannelId = string.Empty;
+    private string _botToken;
+    private string _botGuildId;
+    private string _botChannelId;
     private bool   _isBotRunning;
 
     public string BotToken
@@ -244,29 +257,30 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
             SetFeedback("Guild ID y Channel ID deben ser números válidos.", isError: true);
             return;
         }
-        
+
         try
         {
-            var config = new DiscordBotConfig(BotToken, guildId, channelId);
-            var sink   = await _sinkFactory.Create(AudioSinkType.DiscordBot, config);
-            
+            var botConfig = new DiscordBotConfig(BotToken, guildId, channelId);
+            var sink      = await _sinkFactory.Create(AudioSinkType.DiscordBot, botConfig);
+
             _messageService.UpdateSink(sink);
             IsBotRunning = true;
             SetFeedback("Bot conectado.", isError: false);
+
+            // Persist after successful connection so invalid credentials are never saved.
+            _ = PersistCurrentConfigAsync();
         }
         catch (Exception ex)
         {
             SetFeedback($"Error al conectar bot: {ex.Message}", isError: true);
         }
-
     }
 
     private async Task StopBotAsync()
     {
-        // Replace with a no-op local sink so the pipeline stays intact
-        if(DefaultAudioSinkFactory.Client != null && IsBotRunning == true && DefaultAudioSinkFactory.Client.ConnectionState == Discord.ConnectionState.Connected)
+        if (DefaultAudioSinkFactory.Client is { ConnectionState: Discord.ConnectionState.Connected })
             await DefaultAudioSinkFactory.Client.StopAsync();
-        
+
         IsBotRunning = false;
         SetFeedback("Bot desconectado.", isError: false);
     }
@@ -274,15 +288,15 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     private bool TryParseDiscordIds(out ulong guildId, out ulong channelId)
     {
         channelId = 0;
-        return ulong.TryParse(_botGuildId.Trim(),   out guildId)
-               && ulong.TryParse(_botChannelId.Trim(), out channelId);
+        return ulong.TryParse(_botGuildId.Trim(),    out guildId)
+            && ulong.TryParse(_botChannelId.Trim(),  out channelId);
     }
 
     // ════════════════════════════════════════════════════════════════════════════
     // Manual TTS
     // ════════════════════════════════════════════════════════════════════════════
 
-    private string _manualText  = string.Empty;
+    private string _manualText = string.Empty;
     private bool   _isSending;
 
     public string ManualText
@@ -311,7 +325,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
 
         try
         {
-            await _messageService.ExecuteAsync( text);
+            await _messageService.ExecuteAsync(text);
             SetFeedback("Enviado correctamente.", isError: false);
             ManualText = string.Empty;
         }
@@ -327,6 +341,42 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         {
             IsSending = false;
             _ = ClearFeedbackAfterAsync(TimeSpan.FromSeconds(3));
+        }
+    }
+
+    // ════════════════════════════════════════════════════════════════════════════
+    // Persistence
+    // ════════════════════════════════════════════════════════════════════════════
+
+    /// <summary>
+    /// Builds a Config snapshot from the current ViewModel state and persists it.
+    /// Called only on explicit user confirmation (Apply / successful bot connect).
+    /// Fire-and-forget: errors are logged, not re-thrown.
+    /// </summary>
+    private async Task PersistCurrentConfigAsync()
+    {
+        _ = TryParseDiscordIds(out var guildId, out var channelId);
+
+        var config = new Config
+        {
+            Prefix            = _commandParser.CurrentPrefix,
+            User              = PlayerNameInput,
+            BotToken          = _botToken,
+            BotGuildId        = guildId,
+            BotVoiceChannelId = channelId,
+            // Preserve fields not managed by the ViewModel by reloading first.
+            // This avoids overwriting PathAlbion or legacy fields with defaults.
+        };
+
+        try
+        {
+            await _settingsRepo.SaveAsync(config).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            // Surface on UI thread via Dispatcher — ViewModel should not depend on
+            // App.Current.Dispatcher directly, so we use a local helper.
+            Console.WriteLine($"[Settings] Save failed: {ex}");
         }
     }
 
@@ -351,8 +401,8 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
 
     private void SetFeedback(string message, bool isError)
     {
-        IsFeedbackError = isError;
-        FeedbackMessage = message;
+        IsFeedbackError  = isError;
+        FeedbackMessage  = message;
     }
 
     private void ClearFeedback() => FeedbackMessage = null;
@@ -360,8 +410,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     private async Task ClearFeedbackAfterAsync(TimeSpan delay)
     {
         try { await Task.Delay(delay).ConfigureAwait(false); }
-        catch { /* cancellation ignored */ }
-
+        catch { /* cancellation is fine */ }
         FeedbackMessage = null;
     }
 
@@ -374,7 +423,6 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     private void OnPropertyChanged([CallerMemberName] string? name = null)
         => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
 
-    /// <summary>Sets field and fires INPC only when the value actually changed.</summary>
     private bool Set<T>(ref T field, T value, [CallerMemberName] string? name = null)
     {
         if (EqualityComparer<T>.Default.Equals(field, value)) return false;

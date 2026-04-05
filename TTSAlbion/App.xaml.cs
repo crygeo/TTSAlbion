@@ -1,4 +1,5 @@
-﻿using System.Windows;
+﻿using System.IO;
+using System.Windows;
 using NetWorkLibrery.Interfazes;
 using NetWorkLibrery.Models;
 using TTSAlbion.Albion;
@@ -20,34 +21,44 @@ public partial class App : Application
 {
     private NetworkManager? _networkManager;
 
-    protected async override void OnStartup(StartupEventArgs e)
+    protected override async void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
 
         NativeDependencyGuard.Verify();
 
-        // ── Config ──────────────────────────────────────────────────────────────
-        var config = LoadConfig("Datos/config.json");
+        // ── Settings repository ──────────────────────────────────────────────────
+        // Single source of truth for persistence. Injected everywhere it is needed.
+        var configPath = Path.Combine(AppContext.BaseDirectory, "Datos", "config.json");
+        ISettingsRepository settingsRepo = new JsonSettingsRepository(configPath);
+
+        // Load persisted config; fall back to safe defaults on first run.
+        var config = settingsRepo.Load() ?? DefaultConfig();
 
         // ── Audio pipeline ───────────────────────────────────────────────────────
-        ITtsEngine ttsEngine         = new WindowsTtsEngine();
+        ITtsEngine ttsEngine          = new WindowsTtsEngine();
         IAudioSinkFactory sinkFactory = new DefaultAudioSinkFactory();
 
-        // Default sink: VirtualMic (user can change at runtime)
+        // Default sink on startup: VirtualMic (user can change at runtime).
         IAudioSink initialSink = await sinkFactory.Create(AudioSinkType.VirtualMic);
 
         // ── Command parser ───────────────────────────────────────────────────────
-        ICommandParser commandParser = new CommandParser(config.Prefix);
+        ICommandParser commandParser = new CommandParser(string.IsNullOrWhiteSpace(config.Prefix) ? "!!" : config.Prefix);
 
         // ── Message service ──────────────────────────────────────────────────────
         var messageService = new MessageService(commandParser, ttsEngine, initialSink);
-        
 
         // ── Network event handler ────────────────────────────────────────────────
         var eventHandler = new GenericEventHandler(messageService);
 
-        // ── ViewModel ────────────────────────────────────────────────────────────
-        var viewModel = new MainViewModel( messageService, eventHandler, commandParser, sinkFactory);
+        // ── ViewModel — receives both the factory deps and the loaded config ─────
+        var viewModel = new MainViewModel(
+            messageService,
+            eventHandler,
+            commandParser,
+            sinkFactory,
+            settingsRepo,
+            config);           // <-- seeds UI fields from persisted values
 
         // ── Albion network ───────────────────────────────────────────────────────
         var resolver   = new AlbionPortResolver(config.PathAlbion);
@@ -73,14 +84,19 @@ public partial class App : Application
     protected override void OnExit(ExitEventArgs e)
     {
         _networkManager?.Stop();
+        
         base.OnExit(e);
     }
 
-    private static Config LoadConfig(string relativePath)
+    // ── Helpers ──────────────────────────────────────────────────────────────────
+
+    private static Config DefaultConfig() => new()
     {
-        var fileProvider = new PhysicalFileProvider();
-        var pathResolver = new BaseDirectoryPathResolver();
-        IJsonDeserializer json = new NewtonsoftJsonDeserializer(fileProvider, pathResolver);
-        return json.FromFile<Config>(relativePath);
-    }
+        Prefix          = "!!",
+        User            = string.Empty,
+        PathAlbion      = string.Empty,
+        BotToken        = string.Empty,
+        BotGuildId      = 0,
+        BotVoiceChannelId = 0,
+    };
 }
