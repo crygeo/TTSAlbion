@@ -33,13 +33,11 @@ public sealed class DiscordInfoProvider : IDiscordInfoProvider
 public sealed class ManualTtsCommand : IManualTtsCommand, IDisposable
 {
     private readonly ITtsEngine _ttsEngine;
-    private readonly IWavToPcmConverter _wavConverter;
     private readonly IAudioSink _audioSink;
 
-    public ManualTtsCommand(ITtsEngine ttsEngine, IWavToPcmConverter wavConverter, IAudioSink audioSink)
+    public ManualTtsCommand(ITtsEngine ttsEngine, IAudioSink audioSink)
     {
         _ttsEngine = ttsEngine ?? throw new ArgumentNullException(nameof(ttsEngine));
-        _wavConverter = wavConverter ?? throw new ArgumentNullException(nameof(wavConverter));
         _audioSink = audioSink ?? throw new ArgumentNullException(nameof(audioSink));
     }
 
@@ -48,13 +46,12 @@ public sealed class ManualTtsCommand : IManualTtsCommand, IDisposable
         if (string.IsNullOrWhiteSpace(text))
             return;
 
-        var wav = await _ttsEngine.SynthesizeAsync(text, ct).ConfigureAwait(false);
+        var wav = await _ttsEngine.SynthesizeAsync(text, ct);
         if (wav.Length == 0) return;
 
-        var pcm = _wavConverter.Convert(wav);
 
         // Envío a sink tal cual, sin preocuparse de frames
-        await _audioSink.SendAsync(pcm, ct).ConfigureAwait(false);
+        await _audioSink.SendAsync(wav, ct);
     }
 
     public void Dispose()

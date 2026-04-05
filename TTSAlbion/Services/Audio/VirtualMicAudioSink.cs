@@ -7,6 +7,7 @@ public sealed class VirtualMicAudioSink : IAudioSink, IDisposable
 {
     private readonly WaveOutEvent _output;
     private readonly BufferedWaveProvider _buffer;
+    private IWavToPcmConverter _converter = new WavToPcmConverter(1);
 
     public VirtualMicAudioSink(string deviceName = "CABLE Input")
     {
@@ -24,6 +25,7 @@ public sealed class VirtualMicAudioSink : IAudioSink, IDisposable
 
     public Task SendAsync(byte[] pcm, CancellationToken ct = default)
     {
+        pcm = _converter.Convert(pcm);
         if (pcm is { Length: > 0 })
             _buffer.AddSamples(pcm, 0, pcm.Length);
         return Task.CompletedTask;

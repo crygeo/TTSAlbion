@@ -3,11 +3,13 @@
 using System.IO;
 using NAudio.Wave;
 using TTSAlbion.Interfaces;
+using TTSAlbion.Services.Audio;
 
 public sealed class LocalAudioSink : IAudioSink, IDisposable
 {
     private readonly WaveOutEvent _output = new();
     private readonly BufferedWaveProvider _buffer;
+    private readonly IWavToPcmConverter _converter = new WavToPcmConverter(1);
 
     // Acepta el formato real de SAPI en lugar de hardcodear Discord
     public LocalAudioSink(WaveFormat? format = null)
@@ -23,6 +25,8 @@ public sealed class LocalAudioSink : IAudioSink, IDisposable
 
     public Task SendAsync(byte[] pcm, CancellationToken ct = default)
     {
+        pcm = _converter.Convert(pcm);
+        
         if (pcm is { Length: > 0 })
             _buffer.AddSamples(pcm, 0, pcm.Length);
         return Task.CompletedTask;

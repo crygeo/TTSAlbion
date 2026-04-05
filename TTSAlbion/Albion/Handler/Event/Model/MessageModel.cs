@@ -14,7 +14,7 @@ public class MessageModel : ModelHandler
     [Parse(1)]
     public string User { get; set; }
     [Parse(2)]
-    public string Text { get; set; }
+    public string Message { get; set; }
     [Parse(3)]
     public int Channel { get; set; }
     [Parse(252)]
