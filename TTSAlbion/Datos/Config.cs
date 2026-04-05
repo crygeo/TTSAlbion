@@ -1,3 +1,5 @@
+using TTSAlbion.Services.Audio;
+
 namespace TTSAlbion.Datos;
 
 /// <summary>
@@ -13,6 +15,9 @@ public readonly struct Config
     // ── App ─────────────────────────────────────────────────────────────────────
     public string Prefix     { get; init; }
     public string User       { get; init; }
+    
+    public AudioSinkType AudioSinkType  { get; init; }
+    
     
 
     // ── Discord bot ──────────────────────────────────────────────────────────────

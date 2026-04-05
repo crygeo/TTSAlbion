@@ -1,426 +1,540 @@
-﻿<mah:MetroWindow
+﻿<!--
+    DISEÑO: Material Design puro — Deep Purple Light
+    Estética: Cards elevadas, colores vibrantes, tipografía Material.
+    Sin MahApps. MetroWindow reemplazado por Window estándar + borde custom.
+
+   <Application x:Class="TTSAlbion.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:TTSAlbion"
+             xmlns:util="clr-namespace:Utilidades.Converters"
+             xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes">
+
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+
+<ResourceDictionary Source="pack://application:,,,/MaterialDesignThemes.Wpf;component/Themes/MaterialDesign3.Defaults.xaml"/>
+
+<materialDesign:BundledTheme BaseTheme="Light"
+                             PrimaryColor="DeepPurple"
+                             SecondaryColor="Lime"/>
+
+<ResourceDictionary>
+    <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
+    <util:InverseBooleanToVisibilityConverter x:Key="InverseBooleanToVisibilityConverter"/>
+    <util:NullToBoolConverter x:Key="NullToBoolConv"/>
+</ResourceDictionary>
+
+</ResourceDictionary.MergedDictionaries>
+</ResourceDictionary>
+</Application.Resources>
+
+</Application>
+-->
+<Window
+    x:Name="MainWindow1"
     x:Class="TTSAlbion.MainWindow"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:mah="http://metro.mahapps.com/winfx/xaml/controls"
     xmlns:md="http://materialdesigninxaml.net/winfx/xaml/themes"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:vm="clr-namespace:TTSAlbion.ViewModels"
-    xmlns:audio="clr-namespace:TTSAlbion.Services.Audio"
     mc:Ignorable="d"
     d:DataContext="{d:DesignInstance vm:MainViewModel, IsDesignTimeCreatable=False}"
     Title="TTS Albion"
-    Height="720" Width="460"
+    Height="700" Width="440"
     ResizeMode="CanMinimize"
     WindowStartupLocation="CenterScreen"
-    GlowBrush="{DynamicResource MahApps.Brushes.Accent}"
-    TitleCharacterCasing="Normal"
-    TitleAlignment="Center"
-    Background="{DynamicResource MahApps.Brushes.ThemeBackground}"
-    ShowTitleBar="True"
-    IsWindowDraggable="True"
-    TitleBarHeight="35">
+    WindowStyle="None"
+    AllowsTransparency="True"
+    Background="Transparent"
+    TextElement.FontFamily="{md:MaterialDesignFont}"
+    TextElement.FontSize="13"
+    TextOptions.TextFormattingMode="Ideal"
+    TextOptions.TextRenderingMode="Auto"
+    FontFamily="{md:MaterialDesignFont}">
 
-    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="20,16,20,20">
-        <StackPanel MouseLeftButtonDown="UIElement_OnMouseLeftButtonDown">
+    <Window.Resources>
 
-            <!-- ══ JUGADOR ══ -->
-            <TextBlock Text="JUGADOR"
-                       Style="{StaticResource MaterialDesignOverlineTextBlock}"
-                       FontSize="13"
-                       Foreground="{DynamicResource MahApps.Brushes.AccentBase}"
-                       Margin="0,0,0,8"/>
+        <!-- ── Conversor booleano → visibilidad ── -->
+        <BooleanToVisibilityConverter x:Key="BoolVis"/>
 
-            <md:Card UniformCornerRadius="10" Padding="16" Margin="0,0,0,0">
-                <StackPanel>
+        <!-- ── Etiqueta de sección ── -->
+        <Style x:Key="SectionLabelStyle" TargetType="TextBlock"
+               BasedOn="{StaticResource MaterialDesignOverlineTextBlock}">
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Foreground" Value="{DynamicResource PrimaryHueMidBrush}"/>
+            <Setter Property="Margin" Value="0,20,0,6"/>
+        </Style>
 
-                    <!-- Status row -->
-                    <Grid Margin="0,0,0,12">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
+        <!-- ── TextBox outlined ── -->
+        <Style x:Key="OutlinedInputStyle"
+               TargetType="TextBox"
+               BasedOn="{StaticResource MaterialDesignOutlinedTextBox}">
+            <Setter Property="FontSize" Value="13"/>
+        </Style>
 
-                        <md:PackIcon Kind="AccountCircle" Width="38" Height="38"
-                                     VerticalAlignment="Center" Margin="0,0,12,0">
-                            <md:PackIcon.Style>
-                                <Style TargetType="md:PackIcon">
-                                    <Setter Property="Foreground" Value="{DynamicResource MahApps.Brushes.Accent}"/>
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding HasUser}" Value="False">
-                                            <Setter Property="Foreground"
-                                                    Value="{DynamicResource MahApps.Brushes.SystemControlDisabledBaseLow}"/>
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </md:PackIcon.Style>
-                        </md:PackIcon>
+        <!-- ── Botón raised accent ── -->
+        <Style x:Key="RaisedAccentButtonStyle"
+               TargetType="Button"
+               BasedOn="{StaticResource MaterialDesignRaisedButton}">
+            <Setter Property="md:ButtonAssist.CornerRadius" Value="4"/>
+            <Setter Property="Height" Value="40"/>
+            <Setter Property="Padding" Value="16,0"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+        </Style>
 
-                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                            <TextBlock FontSize="14" FontWeight="Medium"
-                                       Foreground="{DynamicResource MahApps.Brushes.ThemeForeground}">
-                                <TextBlock.Style>
-                                    <Style TargetType="TextBlock">
-                                        <Setter Property="Text" Value="{Binding RegisteredUser}"/>
-                                        <Style.Triggers>
-                                            <DataTrigger Binding="{Binding HasUser}" Value="False">
-                                                <Setter Property="Text" Value="Sin jugador"/>
-                                                <Setter Property="Foreground"
-                                                        Value="{DynamicResource MahApps.Brushes.SystemControlDisabledBaseMediumLow}"/>
-                                                <Setter Property="FontStyle" Value="Italic"/>
-                                            </DataTrigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </TextBlock.Style>
-                            </TextBlock>
-                            <TextBlock FontSize="11" Text="Jugador activo"
-                                       Foreground="{DynamicResource MahApps.Brushes.SystemControlPageTextBaseMediumBrush}"
-                                       Margin="0,2,0,0"
-                                       Visibility="{Binding HasUser, Converter={StaticResource BooleanToVisibilityConverter}}"/>
-                        </StackPanel>
+        <!-- ── Botón outlined ── -->
+        <Style x:Key="OutlinedButtonStyle"
+               TargetType="Button"
+               BasedOn="{StaticResource MaterialDesignOutlinedButton}">
+            <Setter Property="md:ButtonAssist.CornerRadius" Value="4"/>
+            <Setter Property="Height" Value="40"/>
+            <Setter Property="Padding" Value="16,0"/>
+            <Setter Property="FontSize" Value="12"/>
+        </Style>
 
-                        <md:Chip Grid.Column="2" VerticalAlignment="Center" IsEnabled="False" FontSize="11">
-                            <md:Chip.Style>
-                                <Style TargetType="md:Chip" BasedOn="{StaticResource {x:Type md:Chip}}">
-                                    <Setter Property="Content" Value="Activo"/>
-                                    <Setter Property="Background" Value="{DynamicResource SecondaryHueMidBrush}"/>
-                                    <Setter Property="Foreground" Value="{DynamicResource SecondaryHueMidForegroundBrush}"/>
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding HasUser}" Value="False">
-                                            <Setter Property="Content" Value="Sin configurar"/>
-                                            <Setter Property="Background"
-                                                    Value="{DynamicResource MahApps.Brushes.SystemControlDisabledBaseLow}"/>
-                                            <Setter Property="Foreground"
-                                                    Value="{DynamicResource MahApps.Brushes.SystemControlPageTextBaseMediumBrush}"/>
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </md:Chip.Style>
-                        </md:Chip>
-                    </Grid>
+        <!-- ── Card ── -->
+        <Style x:Key="ContentCardStyle" TargetType="md:Card">
+            <Setter Property="UniformCornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="16"/>
+            <Setter Property="Margin" Value="0"/>
+            <Setter Property="md:ElevationAssist.Elevation" Value="Dp2"/>
+        </Style>
 
-                    <!-- Name input row -->
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
+        <!-- ── Feedback text ── -->
+        <Style x:Key="FeedbackTextStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Margin" Value="2,8,0,0"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
+            <Setter Property="Foreground" Value="{DynamicResource SecondaryHueMidBrush}"/>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsFeedbackError}" Value="True">
+                    <Setter Property="Foreground"
+                            Value="{DynamicResource MaterialDesignValidationErrorBrush}"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
 
-                        <TextBox md:HintAssist.Hint="Nombre del jugador..."
-                                 md:HintAssist.IsFloating="True"
-                                 Text="{Binding PlayerNameInput, UpdateSourceTrigger=PropertyChanged}"
-                                 Style="{StaticResource MaterialDesignOutlinedTextBox}"
-                                 FontSize="13"
-                                 Margin="0,0,10,0"
-                                 Foreground="{DynamicResource MahApps.Brushes.ThemeForeground}">
-                            <TextBox.InputBindings>
-                                <KeyBinding Key="Return" Command="{Binding ApplyUserCommand}"/>
-                            </TextBox.InputBindings>
-                        </TextBox>
+    </Window.Resources>
 
-                        <Button Grid.Column="1"
-                                Content="Aplicar"
-                                Command="{Binding ApplyUserCommand}"
-                                Style="{StaticResource MaterialDesignOutlinedButton}"
-                                md:ButtonAssist.CornerRadius="6"
-                                VerticalAlignment="Bottom"
-                                Height="40" Padding="14,0"/>
-                    </Grid>
+    <!-- ═══════════════════════════════════════════════════
+         Contenedor raíz: simula borde de ventana sin chrome
+    ════════════════════════════════════════════════════ -->
+    <Border CornerRadius="10"
+            Background="{DynamicResource MaterialDesignBackground}"
+            BorderBrush="{DynamicResource PrimaryHueMidBrush}"
+            BorderThickness="1.5">
 
-                </StackPanel>
-            </md:Card>
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
 
-            <!-- ══ FUENTE DE MENSAJES ══ -->
-            <TextBlock Text="FUENTE DE MENSAJES"
-                       Style="{StaticResource MaterialDesignOverlineTextBlock}"
-                       FontSize="13"
-                       Foreground="{DynamicResource MahApps.Brushes.AccentBase}"
-                       Margin="0,20,0,8"/>
+            <!-- ── Barra de título custom ── -->
+            <Border Grid.Row="0"
+                    Background="{DynamicResource MaterialDesignBackground}"
+                    CornerRadius="8,8,0,0"
+                    MouseLeftButtonDown="UIElement_OnMouseLeftButtonDown">
+                <Grid Height="44" Margin="16,0">
+                    <TextBlock Text="TTS Albion"
+                               FontSize="14"
+                               FontWeight="Medium"
+                               VerticalAlignment="Center"
+                               HorizontalAlignment="Left"
+                               FontFamily="{md:MaterialDesignFont}"/>
 
-            <md:Card UniformCornerRadius="10" Padding="16">
-                <StackPanel>
-                    <TextBlock FontSize="12" TextWrapping="Wrap"
-                               Foreground="{DynamicResource MahApps.Brushes.SystemControlPageTextBaseMediumBrush}"
-                               Margin="0,0,0,12">
-                        Selecciona qué eventos de chat desencadenan el TTS.
-                    </TextBlock>
-
-                    <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
-                        <CheckBox Content="Chat Message  (zona / global)"
-                                  IsChecked="{Binding ListenChatMessage}"
-                                  FontSize="13"
-                                  Margin="0,0,24,0"/>
-                        <CheckBox Content="Chat Say  (/say)"
-                                  IsChecked="{Binding ListenChatSay}"
-                                  FontSize="13"/>
+                    <!-- Botones de ventana -->
+                    <StackPanel Orientation="Horizontal"
+                                HorizontalAlignment="Right"
+                                VerticalAlignment="Center">
+                        
+                        <Button Width="30" Height="30" Padding="0"
+                                Style="{StaticResource MaterialDesignIconForegroundButton}"
+                                Foreground="Gray"
+                                Click="WindowMinimize">
+                            <md:PackIcon Kind="WindowMinimize" Width="14" Height="14"/>
+                        </Button>
+                        <Button Width="30" Height="30" Padding="0"
+                                Style="{StaticResource MaterialDesignIconForegroundButton}"
+                                Foreground="Red"
+                                Click="Close">
+                            <md:PackIcon Kind="Close" Width="16" Height="16"/>
+                        </Button>
                     </StackPanel>
-                </StackPanel>
-            </md:Card>
-
-            <!-- ══ PREFIJO ══ -->
-            <TextBlock Text="PREFIJO DE COMANDO"
-                       Style="{StaticResource MaterialDesignOverlineTextBlock}"
-                       FontSize="13"
-                       Foreground="{DynamicResource MahApps.Brushes.AccentBase}"
-                       Margin="0,20,0,8"/>
-
-            <md:Card UniformCornerRadius="10" Padding="16">
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="Auto"/>
-                    </Grid.ColumnDefinitions>
-
-                    <TextBox md:HintAssist.Hint="Prefijo (ej: !!)"
-                             md:HintAssist.IsFloating="True"
-                             Text="{Binding PrefixText, UpdateSourceTrigger=PropertyChanged}"
-                             Style="{StaticResource MaterialDesignOutlinedTextBox}"
-                             FontSize="13"
-                             Margin="0,0,10,0"
-                             Foreground="{DynamicResource MahApps.Brushes.ThemeForeground}">
-                        <TextBox.InputBindings>
-                            <KeyBinding Key="Return" Command="{Binding ApplyPrefixCommand}"/>
-                        </TextBox.InputBindings>
-                    </TextBox>
-
-                    <Button Grid.Column="1"
-                            Content="Aplicar"
-                            Command="{Binding ApplyPrefixCommand}"
-                            Style="{StaticResource MaterialDesignOutlinedButton}"
-                            md:ButtonAssist.CornerRadius="6"
-                            VerticalAlignment="Bottom"
-                            Height="40" Padding="14,0"/>
                 </Grid>
-            </md:Card>
+            </Border>
+            <Border Height="8"
+                    VerticalAlignment="Bottom"
+                    Margin="8,0,8,-8"
+                    IsHitTestVisible="False">
+                <Border.Background>
+                    <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                        <GradientStop Color="Black" Offset="0" />
+                        <GradientStop Color="Transparent" Offset="1" />
+                    </LinearGradientBrush>
+                </Border.Background>
+                <Border.Opacity>0.15</Border.Opacity>
+            </Border>
+            <!-- ── Contenido scrollable ── -->
+            <ScrollViewer Grid.Row="1"
+                          VerticalScrollBarVisibility="Auto"
+                          HorizontalScrollBarVisibility="Disabled"
+                          Padding="20,4,20,20">
 
-            <!-- ══ SALIDA DE AUDIO ══ -->
-            <TextBlock Text="SALIDA DE AUDIO"
-                       Style="{StaticResource MaterialDesignOverlineTextBlock}"
-                       FontSize="13"
-                       Foreground="{DynamicResource MahApps.Brushes.AccentBase}"
-                       Margin="0,20,0,8"/>
-
-            <md:Card UniformCornerRadius="10" Padding="16">
                 <StackPanel>
 
-                    <!-- Sink selector -->
-                    <Grid Margin="0,0,0,12">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
+                    <!-- ════════════ JUGADOR ════════════ -->
+                    <TextBlock Text="JUGADOR" Style="{StaticResource SectionLabelStyle}"/>
 
-                        <ComboBox md:HintAssist.Hint="Tipo de salida"
-                                  md:HintAssist.IsFloating="True"
-                                  ItemsSource="{Binding SinkOptions}"
-                                  SelectedItem="{Binding SelectedSink}"
-                                  Style="{StaticResource MaterialDesignOutlinedComboBox}"
-                                  FontSize="13"
-                                  Margin="0,0,10,0"/>
+                    <md:Card Style="{StaticResource ContentCardStyle}">
+                        <StackPanel>
 
-                        <Button Grid.Column="1"
-                                Content="Aplicar"
-                                Command="{Binding ApplySinkCommand}"
-                                Style="{StaticResource MaterialDesignOutlinedButton}"
-                                md:ButtonAssist.CornerRadius="6"
-                                VerticalAlignment="Bottom"
-                                Height="40" Padding="14,0"
-                                Visibility="{Binding IsBotSinkSelected,
-                                    Converter={StaticResource InverseBoolToVisConv}}"/>
-                    </Grid>
+                            <!-- Estado del jugador -->
+                            <Grid Margin="0,0,0,14">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
 
-                    <!-- Bot config panel — visible only when DiscordBot selected -->
-                    <StackPanel Visibility="{Binding IsBotSinkSelected,
-                                    Converter={StaticResource BooleanToVisibilityConverter}}">
-
-                        <Separator Style="{StaticResource MaterialDesignLightSeparator}" Margin="0,0,0,12"/>
-
-                        <TextBlock Text="Configuración del Bot" FontSize="12" FontWeight="Medium"
-                                   Foreground="{DynamicResource MahApps.Brushes.ThemeForeground}"
-                                   Margin="0,0,0,10"/>
-
-                        <TextBox md:HintAssist.Hint="Token del bot"
-                                 md:HintAssist.IsFloating="True"
-                                 Text="{Binding BotToken, UpdateSourceTrigger=PropertyChanged}"
-                                 Style="{StaticResource MaterialDesignOutlinedTextBox}"
-                                 FontSize="13"
-                                 Margin="0,0,0,10"
-                                 Foreground="{DynamicResource MahApps.Brushes.ThemeForeground}"/>
-
-                        <Grid Margin="0,0,0,10">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="12"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-
-                            <TextBox md:HintAssist.Hint="Guild ID"
-                                     md:HintAssist.IsFloating="True"
-                                     Text="{Binding BotGuildId, UpdateSourceTrigger=PropertyChanged}"
-                                     Style="{StaticResource MaterialDesignOutlinedTextBox}"
-                                     FontSize="13"
-                                     Foreground="{DynamicResource MahApps.Brushes.ThemeForeground}"/>
-
-                            <TextBox Grid.Column="2"
-                                     md:HintAssist.Hint="Channel ID"
-                                     md:HintAssist.IsFloating="True"
-                                     Text="{Binding BotChannelId, UpdateSourceTrigger=PropertyChanged}"
-                                     Style="{StaticResource MaterialDesignOutlinedTextBox}"
-                                     FontSize="13"
-                                     Foreground="{DynamicResource MahApps.Brushes.ThemeForeground}"/>
-                        </Grid>
-
-                        <!-- Bot start / stop buttons -->
-                        <StackPanel Orientation="Horizontal">
-                            <Button Content="Encender Bot"
-                                    Command="{Binding StartBotCommand}"
-                                    Style="{StaticResource MaterialDesignRaisedButton}"
-                                    md:ButtonAssist.CornerRadius="6"
-                                    Padding="16,0" Height="38"
-                                    Margin="0,0,10,0">
-                                <Button.ContentTemplate>
-                                    <DataTemplate>
-                                        <StackPanel Orientation="Horizontal">
-                                            <md:PackIcon Kind="Power" Width="15" Height="15"
-                                                         VerticalAlignment="Center" Margin="0,0,6,0"/>
-                                            <TextBlock Text="Encender Bot" VerticalAlignment="Center"/>
-                                        </StackPanel>
-                                    </DataTemplate>
-                                </Button.ContentTemplate>
-                            </Button>
-
-                            <Button Content="Apagar Bot"
-                                    Command="{Binding StopBotCommand}"
-                                    Style="{StaticResource MaterialDesignOutlinedButton}"
-                                    md:ButtonAssist.CornerRadius="6"
-                                    Padding="16,0" Height="38">
-                                <Button.ContentTemplate>
-                                    <DataTemplate>
-                                        <StackPanel Orientation="Horizontal">
-                                            <md:PackIcon Kind="PowerOff" Width="15" Height="15"
-                                                         VerticalAlignment="Center" Margin="0,0,6,0"/>
-                                            <TextBlock Text="Apagar Bot" VerticalAlignment="Center"/>
-                                        </StackPanel>
-                                    </DataTemplate>
-                                </Button.ContentTemplate>
-                            </Button>
-
-                            <!-- Bot status indicator -->
-                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="12,0,0,0">
-                                <Ellipse Width="8" Height="8" VerticalAlignment="Center" Margin="0,0,6,0">
-                                    <Ellipse.Style>
-                                        <Style TargetType="Ellipse">
-                                            <Setter Property="Fill"
-                                                    Value="{DynamicResource MahApps.Brushes.SystemControlDisabledBaseLow}"/>
+                                <!-- Avatar circular -->
+                                <Border Width="42" Height="42" CornerRadius="21"
+                                        Margin="0,0,12,0" VerticalAlignment="Center">
+                                    <Border.Style>
+                                        <Style TargetType="Border">
+                                            <Setter Property="Background"
+                                                    Value="{DynamicResource PrimaryHueMidBrush}"/>
                                             <Style.Triggers>
-                                                <DataTrigger Binding="{Binding IsBotRunning}" Value="True">
-                                                    <Setter Property="Fill"
-                                                            Value="{DynamicResource SecondaryHueMidBrush}"/>
+                                                <DataTrigger Binding="{Binding HasUser}" Value="False">
+                                                    <Setter Property="Background"
+                                                            Value="{DynamicResource MaterialDesignChipBackground}"/>
                                                 </DataTrigger>
                                             </Style.Triggers>
                                         </Style>
-                                    </Ellipse.Style>
-                                </Ellipse>
-                                <TextBlock FontSize="12" VerticalAlignment="Center"
-                                           Foreground="{DynamicResource MahApps.Brushes.SystemControlPageTextBaseMediumBrush}">
-                                    <TextBlock.Style>
-                                        <Style TargetType="TextBlock">
-                                            <Setter Property="Text" Value="Desconectado"/>
+                                    </Border.Style>
+                                    <md:PackIcon Kind="AccountCircle" Width="24" Height="24"
+                                                 HorizontalAlignment="Center"
+                                                 VerticalAlignment="Center">
+                                        <md:PackIcon.Style>
+                                            <Style TargetType="md:PackIcon">
+                                                <Setter Property="Foreground" Value="MediumPurple"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding HasUser}" Value="False">
+                                                        <Setter Property="Foreground" Value="Gray"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </md:PackIcon.Style>
+                                    </md:PackIcon>
+                                </Border>
+
+                                <!-- Info jugador -->
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                    <TextBlock FontSize="14" FontWeight="Medium">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="Text" Value="{Binding RegisteredUser}"/>
+                                                
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding HasUser}" Value="False">
+                                                        <Setter Property="Text" Value="Sin jugador"/>
+                                                        <Setter Property="FontStyle" Value="Italic"/>
+                                                        
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+                                    <TextBlock FontSize="11"
+                                               Text="Jugador activo"
+                                               Style="{StaticResource MaterialDesignCaptionTextBlock}"
+                                               Margin="0,2,0,0"
+                                               Visibility="{Binding HasUser, Converter={StaticResource BoolVis}}"/>
+                                </StackPanel>
+
+                                <!-- Chip de estado -->
+                                <md:Chip Grid.Column="2"
+                                         VerticalAlignment="Center"
+                                         IsEnabled="False"
+                                         FontSize="10"
+                                         md:ElevationAssist.Elevation="Dp0">
+                                    <md:Chip.Style>
+                                        <Style TargetType="md:Chip"
+                                               BasedOn="{StaticResource {x:Type md:Chip}}">
+                                            <Setter Property="Content" Value="Activo"/>
+                                            <Setter Property="Background"
+                                                    Value="{DynamicResource SecondaryHueMidBrush}"/>
+                                            <Setter Property="Foreground" Value="White"/>
                                             <Style.Triggers>
-                                                <DataTrigger Binding="{Binding IsBotRunning}" Value="True">
-                                                    <Setter Property="Text" Value="Conectado"/>
+                                                <DataTrigger Binding="{Binding HasUser}" Value="False">
+                                                    <Setter Property="Content" Value="Sin configurar"/>
                                                 </DataTrigger>
                                             </Style.Triggers>
                                         </Style>
-                                    </TextBlock.Style>
-                                </TextBlock>
+                                    </md:Chip.Style>
+                                </md:Chip>
+                            </Grid>
+
+                            <!-- Input + botón -->
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="10"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+
+                                <TextBox Style="{StaticResource OutlinedInputStyle}"
+                                         md:HintAssist.Hint="Nombre del jugador..."
+                                         md:HintAssist.IsFloating="True"
+                                         Text="{Binding PlayerNameInput, UpdateSourceTrigger=PropertyChanged}">
+                                    <TextBox.InputBindings>
+                                        <KeyBinding Key="Return" Command="{Binding ApplyUserCommand}"/>
+                                    </TextBox.InputBindings>
+                                </TextBox>
+
+                                <Button Grid.Column="2"
+                                        Content="Aplicar"
+                                        Command="{Binding ApplyUserCommand}"
+                                        Style="{StaticResource OutlinedButtonStyle}"
+                                        VerticalAlignment="Bottom"/>
+                            </Grid>
+
+                        </StackPanel>
+                    </md:Card>
+
+                    <!-- ════════════ FUENTE DE MENSAJES ════════════ -->
+                    <TextBlock Text="FUENTE DE MENSAJES" Style="{StaticResource SectionLabelStyle}"/>
+
+                    <md:Card Style="{StaticResource ContentCardStyle}">
+                        <StackPanel>
+                            <TextBlock FontSize="12"
+                                       TextWrapping="Wrap"
+                                       Margin="0,0,0,12">
+                                Selecciona qué eventos de chat desencadenan el TTS.
+                            </TextBlock>
+
+                            <StackPanel Orientation="Horizontal">
+                                <CheckBox Content="Chat Message  (zona / global)"
+                                          IsChecked="{Binding ListenChatMessage}"
+                                          FontSize="12"
+                                          Margin="0,0,20,0"/>
+                                <CheckBox Content="Chat Say  (/say)"
+                                          IsChecked="{Binding ListenChatSay}"
+                                          FontSize="12"/>
                             </StackPanel>
                         </StackPanel>
+                    </md:Card>
 
-                    </StackPanel>
+                    <!-- ════════════ PREFIJO ════════════ -->
+                    <TextBlock Text="PREFIJO DE COMANDO" Style="{StaticResource SectionLabelStyle}"/>
 
-                </StackPanel>
-            </md:Card>
+                    <md:Card Style="{StaticResource ContentCardStyle}">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="10"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
 
-            <!-- ══ TTS MANUAL ══ -->
-            <TextBlock Text="HABLAR MANUALMENTE"
-                       Style="{StaticResource MaterialDesignOverlineTextBlock}"
-                       FontSize="13"
-                       Foreground="{DynamicResource MahApps.Brushes.AccentBase}"
-                       Margin="0,20,0,8"/>
+                            <TextBox Style="{StaticResource OutlinedInputStyle}"
+                                     md:HintAssist.Hint="Prefijo (ej: !!)"
+                                     md:HintAssist.IsFloating="True"
+                                     Text="{Binding PrefixText, UpdateSourceTrigger=PropertyChanged}">
+                                <TextBox.InputBindings>
+                                    <KeyBinding Key="Return" Command="{Binding ApplyPrefixCommand}"/>
+                                </TextBox.InputBindings>
+                            </TextBox>
 
-            <md:Card UniformCornerRadius="10" Padding="16">
-                <StackPanel>
+                            <Button Grid.Column="2"
+                                    Content="Aplicar"
+                                    Command="{Binding ApplyPrefixCommand}"
+                                    Style="{StaticResource OutlinedButtonStyle}"
+                                    VerticalAlignment="Bottom"/>
+                        </Grid>
+                    </md:Card>
 
-                    <Grid Margin="0,0,0,0">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
+                    <!-- ════════════ SALIDA DE AUDIO ════════════ -->
+                    <TextBlock Text="SALIDA DE AUDIO" Style="{StaticResource SectionLabelStyle}"/>
 
-                        <TextBox md:HintAssist.Hint="Texto a vocalizar..."
-                                 md:HintAssist.IsFloating="True"
-                                 Text="{Binding ManualText, UpdateSourceTrigger=PropertyChanged}"
-                                 Style="{StaticResource MaterialDesignOutlinedTextBox}"
-                                 FontSize="13"
-                                 Margin="0,0,10,0"
-                                 Foreground="{DynamicResource MahApps.Brushes.ThemeForeground}">
-                            <TextBox.InputBindings>
-                                <KeyBinding Key="Return" Command="{Binding SpeakCommand}"/>
-                            </TextBox.InputBindings>
-                        </TextBox>
+                    <md:Card Style="{StaticResource ContentCardStyle}">
+                        <StackPanel>
 
-                        <Button Grid.Column="1"
-                                Command="{Binding SpeakCommand}"
-                                Style="{StaticResource MaterialDesignRaisedButton}"
-                                md:ButtonAssist.CornerRadius="6"
-                                VerticalAlignment="Bottom"
-                                Height="40" Padding="14,0">
-                            <Button.ContentTemplate>
-                                <DataTemplate>
+                            <!-- Selector -->
+                            <Grid Margin="0,0,0,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="10"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+
+                                <ComboBox md:HintAssist.Hint="Tipo de salida"
+                                          md:HintAssist.IsFloating="True"
+                                          Style="{StaticResource MaterialDesignOutlinedComboBox}"
+                                          FontSize="13"
+                                          ItemsSource="{Binding SinkOptions}"
+                                          SelectedItem="{Binding SelectedSink}"/>
+
+                                <Button Grid.Column="2"
+                                        Content="Aplicar"
+                                        Command="{Binding ApplySinkCommand}"
+                                        VerticalAlignment="Bottom" Visibility="{Binding IsBotSinkSelected, Converter={StaticResource InverseBooleanToVisibilityConverter}}" >
+                                    
+                                </Button>
+                            </Grid>
+
+                            <!-- Panel Discord Bot -->
+                            <StackPanel Visibility="{Binding IsBotSinkSelected, Converter={StaticResource BoolVis}}">
+
+                                <Separator Margin="0,14,0,14"/>
+
+                                <TextBlock Text="Configuración del Bot"
+                                           FontSize="12"
+                                           FontWeight="Medium"
+                                           Margin="0,0,0,10"/>
+
+                                <TextBox md:HintAssist.Hint="Token del bot"
+                                         md:HintAssist.IsFloating="True"
+                                         Style="{StaticResource OutlinedInputStyle}"
+                                         Text="{Binding BotToken, UpdateSourceTrigger=PropertyChanged}"
+                                         Margin="0,0,0,10"/>
+
+                                <Grid Margin="0,0,0,12">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="10"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <TextBox md:HintAssist.Hint="Guild ID"
+                                             md:HintAssist.IsFloating="True"
+                                             Style="{StaticResource OutlinedInputStyle}"
+                                             Text="{Binding BotGuildId, UpdateSourceTrigger=PropertyChanged}"/>
+
+                                    <TextBox Grid.Column="2"
+                                             md:HintAssist.Hint="Channel ID"
+                                             md:HintAssist.IsFloating="True"
+                                             Style="{StaticResource OutlinedInputStyle}"
+                                             Text="{Binding BotChannelId, UpdateSourceTrigger=PropertyChanged}"/>
+                                </Grid>
+
+                                <!-- Start / Stop + indicador -->
+                                <StackPanel Orientation="Horizontal">
+                                    <Button Command="{Binding StartBotCommand}"
+                                            Style="{StaticResource RaisedAccentButtonStyle}"
+                                            Margin="0,0,8,0">
+                                        <StackPanel Orientation="Horizontal">
+                                            <md:PackIcon Kind="Power" Width="14" Height="14"
+                                                         VerticalAlignment="Center" Margin="0,0,5,0"/>
+                                            <TextBlock Text="Encender Bot" VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                    </Button>
+
+                                    <Button Command="{Binding StopBotCommand}"
+                                            Style="{StaticResource OutlinedButtonStyle}"
+                                            Margin="0,0,12,0">
+                                        <StackPanel Orientation="Horizontal">
+                                            <md:PackIcon Kind="PowerOff" Width="14" Height="14"
+                                                         VerticalAlignment="Center" Margin="0,0,5,0"/>
+                                            <TextBlock Text="Apagar Bot" VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                    </Button>
+
+                                    <!-- Estado del bot -->
+                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                        <Ellipse Width="8" Height="8"
+                                                 VerticalAlignment="Center"
+                                                 Margin="0,0,6,0">
+                                            <Ellipse.Style>
+                                                <Style TargetType="Ellipse">
+                                                    <Setter Property="Fill"
+                                                            Value="GreenYellow"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsBotRunning}" Value="True">
+                                                            <Setter Property="Fill"
+                                                                    Value="{DynamicResource SecondaryHueMidBrush}"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Ellipse.Style>
+                                        </Ellipse>
+                                        <TextBlock FontSize="12" VerticalAlignment="Center">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="Text" Value="Desconectado"/>
+                                                    
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsBotRunning}" Value="True">
+                                                            <Setter Property="Text" Value="Conectado"/>
+                                                            
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+                                    </StackPanel>
+                                </StackPanel>
+
+                            </StackPanel>
+
+                        </StackPanel>
+                    </md:Card>
+
+                    <!-- ════════════ TTS MANUAL ════════════ -->
+                    <TextBlock Text="HABLAR MANUALMENTE" Style="{StaticResource SectionLabelStyle}"/>
+
+                    <md:Card Style="{StaticResource ContentCardStyle}">
+                        <StackPanel>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="10"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+
+                                <TextBox md:HintAssist.Hint="Texto a vocalizar..."
+                                         md:HintAssist.IsFloating="True"
+                                         Style="{StaticResource OutlinedInputStyle}"
+                                         Text="{Binding ManualText, UpdateSourceTrigger=PropertyChanged}">
+                                    <TextBox.InputBindings>
+                                        <KeyBinding Key="Return" Command="{Binding SpeakCommand}"/>
+                                    </TextBox.InputBindings>
+                                </TextBox>
+
+                                <Button Grid.Column="2"
+                                        Command="{Binding SpeakCommand}"
+                                        Style="{StaticResource RaisedAccentButtonStyle}"
+                                        VerticalAlignment="Bottom">
                                     <StackPanel Orientation="Horizontal">
-                                        <md:PackIcon Kind="VolumeHigh" Width="15" Height="15"
-                                                     VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                        <md:PackIcon Kind="VolumeHigh" Width="14" Height="14"
+                                                     VerticalAlignment="Center" Margin="0,0,5,0"/>
                                         <TextBlock Text="Hablar" VerticalAlignment="Center"/>
                                     </StackPanel>
-                                </DataTemplate>
-                            </Button.ContentTemplate>
-                        </Button>
-                    </Grid>
+                                </Button>
+                            </Grid>
 
-                    <!-- Feedback -->
-                    <TextBlock Margin="0,10,0,0"
-                               FontSize="12"
-                               Text="{Binding FeedbackMessage}"
-                               TextWrapping="Wrap">
-                        <TextBlock.Style>
-                            <Style TargetType="TextBlock">
-                                <Setter Property="Visibility" Value="Collapsed"/>
-                                <Setter Property="Foreground" Value="{DynamicResource SecondaryHueMidBrush}"/>
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding FeedbackMessage,
-                                        Converter={StaticResource NullToBoolConv}}" Value="True">
-                                        <Setter Property="Visibility" Value="Visible"/>
-                                    </DataTrigger>
-                                    <DataTrigger Binding="{Binding IsFeedbackError}" Value="True">
-                                        <Setter Property="Foreground"
-                                                Value="{DynamicResource MaterialDesignValidationErrorBrush}"/>
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </TextBlock.Style>
-                    </TextBlock>
+                            <!-- Feedback -->
+                            <TextBlock Text="{Binding FeedbackMessage}"
+                                       TextWrapping="Wrap"
+                                       Style="{StaticResource FeedbackTextStyle}"/>
+
+                        </StackPanel>
+                    </md:Card>
+
+                    <!-- ════════════ PIE ════════════ -->
+                    <TextBlock Margin="0,16,0,0"
+                               FontSize="11"
+                               HorizontalAlignment="Center"
+                               Text="TTS Albion · Escucha pasiva de red activa"/>
 
                 </StackPanel>
-            </md:Card>
+            </ScrollViewer>
 
-            <TextBlock Margin="0,16,0,0"
-                       FontSize="11" HorizontalAlignment="Center"
-                       Foreground="{DynamicResource MahApps.Brushes.SystemControlPageTextBaseMediumBrush}"
-                       Text="TTS Albion · Escucha pasiva de red activa"/>
-
-        </StackPanel>
-    </ScrollViewer>
-</mah:MetroWindow>
+        </Grid>
+    </Border>
+</Window>

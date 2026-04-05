@@ -3,36 +3,24 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:local="clr-namespace:TTSAlbion"
              xmlns:util="clr-namespace:Utilidades.Converters"
-             >
+             xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes">
 
     <Application.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
 
-                <!-- MahApps.Metro base -->
-                <ResourceDictionary Source="pack://application:,,,/MahApps.Metro;component/Styles/Controls.xaml"/>
-                <ResourceDictionary Source="pack://application:,,,/MahApps.Metro;component/Styles/Fonts.xaml"/>
+                <ResourceDictionary Source="pack://application:,,,/MaterialDesignThemes.Wpf;component/Themes/MaterialDesign3.Defaults.xaml"/>
+                <materialDesign:BundledTheme BaseTheme="Light" PrimaryColor="DeepPurple" SecondaryColor="Lime"/>
 
-                <!-- Tema: Dark + acento morado (puedes cambiar a Light y a cualquier color) -->
-                <ResourceDictionary Source="pack://application:,,,/MahApps.Metro;component/Styles/Themes/dark.cyan.xaml"/>
 
-                <!-- Material Design controles base.
-                     El tema Dark y la paleta se aplican por código en App.xaml.cs
-                     con ThemeManager, evitando rutas internas de MaterialDesignColors
-                     que cambian entre versiones del paquete. -->
-                <ResourceDictionary Source="pack://application:,,,/MaterialDesignThemes.Wpf;component/Themes/MaterialDesign2.Defaults.xaml"/>
+                <!-- <ResourceDictionary Source="pack://application:,,,/MahApps.Metro;component/Styles/Controls.xaml"/> -->
+                <!-- <ResourceDictionary Source="pack://application:,,,/MahApps.Metro;component/Styles/Fonts.xaml"/> -->
+                <!-- <ResourceDictionary Source="pack://application:,,,/MahApps.Metro;component/Styles/Themes/dark.cyan.xaml"/> -->
+                
 
-                <!-- Compatibility layer Material + MahApps -->
-                <ResourceDictionary Source="pack://application:,,,/MaterialDesignThemes.MahApps;component/Themes/MaterialDesignTheme.MahApps.Defaults.xaml"/>
-
-                <!-- Converters compartidos -->
                 <ResourceDictionary>
                     <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
-
-                    <!-- Inverse: True → Collapsed, False → Visible -->
-                    <util:InverseBooleanToVisibilityConverter x:Key="InverseBoolToVisConv"/>
-
-                    <!-- Null → False, any string → True -->
+                    <util:InverseBooleanToVisibilityConverter x:Key="InverseBooleanToVisibilityConverter"/>
                     <util:NullToBoolConverter x:Key="NullToBoolConv"/>
                 </ResourceDictionary>
 

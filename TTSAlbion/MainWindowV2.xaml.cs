@@ -1,5 +1,4 @@
-﻿using System.Windows;
-using System.Windows.Input;
+﻿using System.Windows.Input;
 using MahApps.Metro.Controls;
 using TTSAlbion.ViewModels;
 
@@ -9,9 +8,9 @@ namespace TTSAlbion;
 /// Code-behind mínimo: solo inicializa DataContext.
 /// Toda la lógica vive en MainViewModel.
 /// </summary>
-public partial class MainWindow : Window
+public partial class MainWindowV2 : MetroWindow
 {
-    public MainWindow(MainViewModel viewModel)
+    public MainWindowV2(MainViewModel viewModel)
     {
         InitializeComponent();
         DataContext = viewModel;
@@ -31,19 +30,5 @@ public partial class MainWindow : Window
             {
             }
         }
-    }
-
-    
-    // ================================
-// Window chrome behavior
-// ================================
-    private void WindowMinimize(object sender, RoutedEventArgs e)
-    {
-        WindowState = WindowState.Minimized;
-    }
-
-    private void Close(object sender, RoutedEventArgs e)
-    {
-        Close();
     }
 }

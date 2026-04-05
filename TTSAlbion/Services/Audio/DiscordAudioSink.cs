@@ -52,6 +52,9 @@ public sealed class DiscordAudioSink : IAudioSink, IAsyncDisposable
 
     public async Task SendAsync(byte[] pcm, CancellationToken ct = default)
     {
+        if(_client.ConnectionState != ConnectionState.Connected)
+            throw new InvalidOperationException("Discord client is not connected.");
+        
         pcm = _converter.Convert(pcm);
         
         var stream = await GetOrConnectAsync(ct).ConfigureAwait(false);

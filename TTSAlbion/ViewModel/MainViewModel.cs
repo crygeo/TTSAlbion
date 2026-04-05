@@ -59,7 +59,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         SpeakCommand       = new AsyncRelayCommand(ExecuteSpeakAsync,  CanSpeak);
         ApplyUserCommand   = new RelayCommand(ApplyUser,               CanApplyUser);
         ApplyPrefixCommand = new RelayCommand(ApplyPrefix,             CanApplyPrefix);
-        ApplySinkCommand   = new AsyncRelayCommand(ApplySinkAsync);
+        ApplySinkCommand   = new AsyncRelayCommand(ApplySinkAsync,     CanAppySink);
         StartBotCommand    = new AsyncRelayCommand(StartBotAsync,
             () => !_isBotRunning && SelectedSink == AudioSinkType.DiscordBot);
         StopBotCommand     = new AsyncRelayCommand(StopBotAsync,
@@ -169,7 +169,13 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     // ════════════════════════════════════════════════════════════════════════════
     // Audio sink selection
     // ════════════════════════════════════════════════════════════════════════════
+    
+    private bool CanAppySink() => _oldSinl != SelectedSink;
 
+    // ================================
+// Propiedad SelectedSink
+// ================================
+    private AudioSinkType _oldSinl = AudioSinkType.VirtualMic;
     private AudioSinkType _selectedSink = AudioSinkType.VirtualMic;
 
     public AudioSinkType SelectedSink
@@ -180,11 +186,33 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
             if (Set(ref _selectedSink, value))
             {
                 OnPropertyChanged(nameof(IsBotSinkSelected));
-                ((AsyncRelayCommand)StartBotCommand).RaiseCanExecuteChanged();
-                ((AsyncRelayCommand)StopBotCommand).RaiseCanExecuteChanged();
+
+                // Notificar comandos
+                RaiseCommands();
             }
         }
     }
+    
+    
+    // ================================
+// Estado: ¿hay cambios pendientes?
+// ================================
+    private bool CanApplySink()
+    {
+        return _oldSinl != SelectedSink;
+    }
+    
+    // ================================
+// Re-evaluación de comandos
+// ================================
+    private void RaiseCommands()
+    {
+        ((AsyncRelayCommand)StartBotCommand).RaiseCanExecuteChanged();
+        ((AsyncRelayCommand)StopBotCommand).RaiseCanExecuteChanged();
+        ((AsyncRelayCommand)ApplySinkCommand).RaiseCanExecuteChanged();
+    }
+    
+    
 
     public bool IsBotSinkSelected => SelectedSink == AudioSinkType.DiscordBot;
 
@@ -202,6 +230,10 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
             var sink = await _sinkFactory.Create(SelectedSink);
             _messageService.UpdateSink(sink);
             SetFeedback($"Sink cambiado a {SelectedSink}.", isError: false);
+            _oldSinl = SelectedSink;
+
+            RaiseCommands();
+
         }
         catch (Exception ex)
         {

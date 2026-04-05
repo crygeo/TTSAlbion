@@ -79,6 +79,7 @@ public partial class App : Application
 
         // ── Window ───────────────────────────────────────────────────────────────
         new MainWindow(viewModel).Show();
+        // new MainWindowV2(viewModel).Show();
     }
 
     protected override void OnExit(ExitEventArgs e)
