@@ -1,9 +1,24 @@
-﻿using System.Reflection;
-using TTSAlbion.Albion.Models.Converters;
-using TTSAlbion.Atributos;
+﻿using TTSAlbion.Albion.Models.Converters;
 
 namespace TTSAlbion.Albion.Models;
 
+/// <summary>
+/// Base class for packet model objects.
+///
+/// Mapping strategy (zero reflection on the hot path):
+/// On the first instantiation of each concrete type, <see cref="PropertyAccessorCache"/>
+/// builds a compiled <see cref="PropertyAccessor"/> array for that type and stores it
+/// indefinitely. Every subsequent packet of the same type reuses the cached accessors.
+///
+/// Per-packet cost (after warm-up):
+/// - One <see cref="PropertyAccessorCache.GetOrBuild"/> call → ConcurrentDictionary read (lock-free).
+/// - One loop over the accessor array → compiled lambda invocations, no reflection.
+/// - One <see cref="ResolvePrimitive"/> call per property → simple type-switch, no reflection.
+///
+/// Thread safety:
+/// - The cache itself is thread-safe (ConcurrentDictionary).
+/// - Model instances are never shared across threads; each packet produces its own instance.
+/// </summary>
 public abstract class ModelHandler
 {
     protected ModelHandler(Dictionary<byte, object> parameters)
@@ -14,112 +29,61 @@ public abstract class ModelHandler
         }
         catch (Exception e)
         {
-            Console.WriteLine($"[{GetType().Name}] Error al mapear propiedades: {e}");
+            Console.WriteLine($"[{GetType().Name}] Error mapping properties: {e}");
         }
     }
+
+    // ── Hot path ─────────────────────────────────────────────────────────────────
 
     private void MapProperties(Dictionary<byte, object> parameters)
     {
-        var props = GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance);
+        // ConcurrentDictionary read — lock-free after first build for this type.
+        var accessors = PropertyAccessorCache.GetOrBuild(GetType());
 
-        foreach (var prop in props)
+        foreach (var accessor in accessors)
         {
-            var attr = prop.GetCustomAttribute<ParseAttribute>();
-            if (attr is null) continue;
-            if (!parameters.TryGetValue(attr.Key, out var rawValue) || rawValue is null) continue;
+            if (!parameters.TryGetValue(accessor.Key, out var rawValue) || rawValue is null)
+                continue;
 
-            var value = attr.ConverterType is not null
-                ? ResolveWithConverter(attr.ConverterType, rawValue, prop.PropertyType)
-                : ResolvePrimitive(rawValue, prop.PropertyType);
+            var value = accessor.Converter is not null
+                ? accessor.Converter.Convert(rawValue)
+                : ResolvePrimitive(rawValue, accessor.TargetType);
 
             if (value is not null)
-                SetProperty(prop, value);
+                accessor.Setter(this, value); // compiled lambda — no reflection
         }
     }
 
-    // --- Resolución primitiva ---
+    // ── Primitive resolution ──────────────────────────────────────────────────────
 
+    /// <summary>
+    /// Converts <paramref name="rawValue"/> to <paramref name="targetType"/> using
+    /// BCL Convert methods. TargetType is already Nullable-unwrapped by the accessor.
+    ///
+    /// This method is intentionally not virtual — subclasses should use
+    /// <see cref="IValueConverter{T}"/> via <see cref="ParseAttribute"/> instead.
+    /// </summary>
     private static object? ResolvePrimitive(object rawValue, Type targetType)
     {
-        // Unwrap Nullable<T> → T
-        var type = Nullable.GetUnderlyingType(targetType) ?? targetType;
-
         try
         {
-            if (type == typeof(string))  return rawValue.ToString();
-            if (type == typeof(int))     return System.Convert.ToInt32(rawValue);
-            if (type == typeof(long))    return System.Convert.ToInt64(rawValue);
-            if (type == typeof(short))   return System.Convert.ToInt16(rawValue);
-            if (type == typeof(byte))    return System.Convert.ToByte(rawValue);
-            if (type == typeof(float))   return System.Convert.ToSingle(rawValue);
-            if (type == typeof(double))  return System.Convert.ToDouble(rawValue);
-            if (type == typeof(bool))    return System.Convert.ToBoolean(rawValue);
-            if (type == typeof(Guid))    return rawValue is byte[] b ? new Guid(b) : Guid.Parse(rawValue.ToString()!);
-            if (type.IsEnum)             return Enum.ToObject(type, rawValue);
+            if (targetType == typeof(string))  return rawValue.ToString();
+            if (targetType == typeof(int))     return Convert.ToInt32(rawValue);
+            if (targetType == typeof(long))    return Convert.ToInt64(rawValue);
+            if (targetType == typeof(short))   return Convert.ToInt16(rawValue);
+            if (targetType == typeof(byte))    return Convert.ToByte(rawValue);
+            if (targetType == typeof(float))   return Convert.ToSingle(rawValue);
+            if (targetType == typeof(double))  return Convert.ToDouble(rawValue);
+            if (targetType == typeof(bool))    return Convert.ToBoolean(rawValue);
+            if (targetType == typeof(Guid))    return rawValue is byte[] b ? new Guid(b) : Guid.Parse(rawValue.ToString()!);
+            if (targetType.IsEnum)             return Enum.ToObject(targetType, rawValue);
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[ModelHandler] Error convirtiendo '{rawValue}' a {type.Name}: {ex.Message}");
+            Console.WriteLine(
+                $"[ModelHandler] Failed to convert '{rawValue}' to {targetType.Name}: {ex.Message}");
         }
 
         return null;
-    }
-
-    // --- Resolución via conversor ---
-
-    private static object? ResolveWithConverter(Type converterType, object rawValue, Type targetType)
-    {
-        // Valida que el conversor implemente IValueConverter<T> y que T sea compatible con la propiedad
-        var converterInterface = converterType
-            .GetInterfaces()
-            .FirstOrDefault(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IValueConverter<>));
-
-        if (converterInterface is null)
-        {
-            Console.WriteLine($"[ModelHandler] {converterType.Name} no implementa IValueConverter<T>.");
-            return null;
-        }
-
-        var outputType = converterInterface.GetGenericArguments()[0];
-        if (!targetType.IsAssignableFrom(outputType))
-        {
-            Console.WriteLine($"[ModelHandler] {converterType.Name} produce {outputType.Name} pero la propiedad espera {targetType.Name}.");
-            return null;
-        }
-
-        try
-        {
-            var converter = Activator.CreateInstance(converterType)
-                ?? throw new InvalidOperationException($"No se pudo instanciar {converterType.Name}.");
-
-            var method = converterType.GetMethod(nameof(IValueConverter<object>.Convert))
-                ?? throw new InvalidOperationException($"{converterType.Name} no tiene método Convert.");
-
-            return method.Invoke(converter, [rawValue]);
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"[ModelHandler] Error ejecutando {converterType.Name}: {ex.Message}");
-            return null;
-        }
-    }
-
-    // --- Asignación via backing field (soporta init-only y get-only) ---
-
-    private void SetProperty(PropertyInfo prop, object value)
-    {
-        var backingField = GetType().GetField(
-            $"<{prop.Name}>k__BackingField",
-            BindingFlags.NonPublic | BindingFlags.Instance);
-
-        if (backingField is not null)
-        {
-            backingField.SetValue(this, value);
-            return;
-        }
-
-        // Fallback: setter público normal
-        if (prop.CanWrite)
-            prop.SetValue(this, value);
     }
 }

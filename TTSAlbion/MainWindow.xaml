@@ -142,7 +142,20 @@
                     CornerRadius="8,8,0,0"
                     MouseLeftButtonDown="UIElement_OnMouseLeftButtonDown">
                 <Grid Height="44" Margin="16,0">
-                    <TextBlock Text="TTS Albion"
+                    
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="32"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    
+                    <Border  >
+                        <Border.Background>
+                            <ImageBrush ImageSource="/icon.png" Stretch="Uniform"/>
+                        </Border.Background>
+
+                    </Border>
+                    <TextBlock Grid.Column="1" Text="TTS Albion"
                                FontSize="14"
                                FontWeight="Medium"
                                VerticalAlignment="Center"
@@ -150,7 +163,7 @@
                                FontFamily="{md:MaterialDesignFont}"/>
 
                     <!-- Botones de ventana -->
-                    <StackPanel Orientation="Horizontal"
+                    <StackPanel Grid.Column="2" Orientation="Horizontal"
                                 HorizontalAlignment="Right"
                                 VerticalAlignment="Center">
                         

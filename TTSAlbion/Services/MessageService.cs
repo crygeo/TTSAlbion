@@ -68,33 +68,19 @@ public sealed class MessageService : IDisposable
     
     public Task RunCommandAsync(ChatSayModel message)
     {
-        return RunCommandAsync(message.User, message.Message);
+        return ExecuteAsync(message.Message);
     }
     
     // ================================
     // Pipeline unificado
     // ================================
-    public async Task RunCommandAsync(string user, string text, bool ignoreUser = false)
+    public async Task RunCommandAsync(string user, string text)
     {
-        // Autorización
-        if (!IsAuthorized(user, ignoreUser)) return;
-
         // Parseo
         if (!TryGetCommand(text, out var payload)) return;
 
         // Ejecución
         await ExecuteAsync(payload);
-    }
-
-    // ================================
-    // Autorización de usuario
-    // ================================
-    private bool IsAuthorized(string user, bool ignoreUser)
-    {
-        if (ignoreUser) return true;
-        if (_registeredUser is null) return false;
-
-        return user.Equals(_registeredUser, StringComparison.OrdinalIgnoreCase);
     }
 
     // ================================

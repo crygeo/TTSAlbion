@@ -74,12 +74,12 @@ public sealed class JsonSettingsRepository : ISettingsRepository
         // If the app crashes between the two operations the original file is intact.
         var tempPath = _filePath + ".tmp";
 
-        await _writeLock.WaitAsync(ct).ConfigureAwait(false);
+        await _writeLock.WaitAsync(ct);
         try
         {
             // Ensure directory exists (relevant on first run)
             var dir = Path.GetDirectoryName(_filePath);
-            if (!string.IsNullOrEmpty(dir))
+            if (!string.IsNullOrEmpty(dir)) 
                 Directory.CreateDirectory(dir);
 
             await File.WriteAllTextAsync(tempPath, json, Encoding.UTF8, ct).ConfigureAwait(false);

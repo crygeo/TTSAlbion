@@ -33,6 +33,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     private readonly ICommandParser      _commandParser;
     private readonly IAudioSinkFactory   _sinkFactory;
     private readonly ISettingsRepository _settingsRepo;
+    private readonly Config _initialConfig;
 
     public MainViewModel(
         MessageService       messageService,
@@ -47,13 +48,16 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         _commandParser  = commandParser  ?? throw new ArgumentNullException(nameof(commandParser));
         _sinkFactory    = sinkFactory    ?? throw new ArgumentNullException(nameof(sinkFactory));
         _settingsRepo   = settingsRepo   ?? throw new ArgumentNullException(nameof(settingsRepo));
-
+        _initialConfig = initialConfig;
+        
         // Seed UI from persisted config
         _prefixText   = commandParser.CurrentPrefix;          // already seeded from config in App.xaml.cs
         _botToken     = initialConfig.BotToken        ?? string.Empty;
         _botGuildId   = initialConfig.BotGuildId      == 0 ? string.Empty : initialConfig.BotGuildId.ToString();
         _botChannelId = initialConfig.BotVoiceChannelId == 0 ? string.Empty : initialConfig.BotVoiceChannelId.ToString();
-        _registeredUser = initialConfig.User ?? string.Empty;
+        RegisteredUser = initialConfig.User ?? string.Empty;
+        
+        _eventHandler.SetTrackedUser(RegisteredUser);
 
         // Commands
         SpeakCommand       = new AsyncRelayCommand(ExecuteSpeakAsync,  CanSpeak);
@@ -97,9 +101,11 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         if (name.Length == 0) return;
 
         RegisteredUser = name;
+        
         _messageService.RegisterUser(name);
         _eventHandler.SetTrackedUser(name);
-
+        
+        PlayerNameInput = string.Empty;
         _ = PersistCurrentConfigAsync();   // fire-and-forget
 
         
@@ -158,6 +164,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         {
             _commandParser.SetPrefix(prefix);
             SetFeedback("Prefijo actualizado.", isError: false);
+            ((RelayCommand)ApplyPrefixCommand).RaiseCanExecuteChanged();
             _ = PersistCurrentConfigAsync();   // fire-and-forget
         }
         catch (ArgumentException ex)
@@ -391,18 +398,19 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
 
         var config = new Config
         {
-            Prefix            = _commandParser.CurrentPrefix,
-            User              = PlayerNameInput,
+            Prefix            = PrefixText,
+            User              = RegisteredUser ?? PlayerNameInput,
             BotToken          = _botToken,
             BotGuildId        = guildId,
             BotVoiceChannelId = channelId,
+            PathAlbion = _initialConfig.PathAlbion,
             // Preserve fields not managed by the ViewModel by reloading first.
             // This avoids overwriting PathAlbion or legacy fields with defaults.
         };
 
         try
         {
-            await _settingsRepo.SaveAsync(config).ConfigureAwait(false);
+            await _settingsRepo.SaveAsync(config);
         }
         catch (Exception ex)
         {

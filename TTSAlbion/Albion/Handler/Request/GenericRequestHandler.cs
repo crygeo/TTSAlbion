@@ -6,7 +6,7 @@ namespace TTSAlbion.Albion.Handler.Request;
 
 public class GenericRequestHandler : PacketHandler<RequestPacket>
 {
-    public GenericRequestRouter Router => new GenericRequestRouter();
+    public GenericRequestRouter Router = new GenericRequestRouter();
 
 
     public GenericRequestHandler()

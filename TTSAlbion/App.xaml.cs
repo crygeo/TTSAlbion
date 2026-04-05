@@ -50,6 +50,8 @@ public partial class App : Application
 
         // ── Network event handler ────────────────────────────────────────────────
         var eventHandler = new GenericEventHandler(messageService);
+        eventHandler.SetTrackedUser(string.IsNullOrWhiteSpace(config.User) ? null : config.User);
+        eventHandler.SetSourceFilter(MessageSourceFilter.ChatMessage | MessageSourceFilter.ChatSay);
 
         // ── ViewModel — receives both the factory deps and the loaded config ─────
         var viewModel = new MainViewModel(
