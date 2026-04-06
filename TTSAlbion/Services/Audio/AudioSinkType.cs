@@ -27,11 +27,6 @@ public interface IAudioSinkFactory
     /// Callers are responsible for disposing the returned instance when it
     /// is replaced or the application exits.
     /// </summary>
-    Task<IAudioSink> Create(AudioSinkType type, DiscordBotConfig? botConfig = null);
+    Task<IAudioSink> Create(AudioSinkType type);
 }
 
-/// <summary>
-/// Configuration payload required when <see cref="AudioSinkType.DiscordBot"/> is selected.
-/// Kept as a value-type record so it can be passed around cheaply and compared by value.
-/// </summary>
-public sealed record DiscordBotConfig(string Token, ulong GuildId, ulong VoiceChannelId);

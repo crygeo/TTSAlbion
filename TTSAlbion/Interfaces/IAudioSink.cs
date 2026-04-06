@@ -10,3 +10,4 @@ public interface IAudioSink
     /// <summary>PCM 16-bit signed, 48kHz, mono.</summary>
     Task SendAsync(byte[] pcm, CancellationToken ct = default);
 }
+

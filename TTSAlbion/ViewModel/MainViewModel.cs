@@ -41,8 +41,14 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         ICommandParser       commandParser,
         IAudioSinkFactory    sinkFactory,
         ISettingsRepository  settingsRepo,
-        Config               initialConfig)
+        Config               initialConfig,
+        ISinkAvailabilityService  sinkAvailabilityService,
+        string? startupWarning
+        )
     {
+        if (startupWarning is not null)
+            SetFeedback(startupWarning, isError: true);
+        
         _messageService = messageService ?? throw new ArgumentNullException(nameof(messageService));
         _eventHandler   = eventHandler   ?? throw new ArgumentNullException(nameof(eventHandler));
         _commandParser  = commandParser  ?? throw new ArgumentNullException(nameof(commandParser));
@@ -65,9 +71,18 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         ApplyPrefixCommand = new RelayCommand(ApplyPrefix,             CanApplyPrefix);
         ApplySinkCommand   = new AsyncRelayCommand(ApplySinkAsync,     CanAppySink);
         StartBotCommand    = new AsyncRelayCommand(StartBotAsync,
-            () => !_isBotRunning && SelectedSink == AudioSinkType.DiscordBot);
+            () => !_isBotRunning && SelectedSink.Type == AudioSinkType.DiscordBot);
         StopBotCommand     = new AsyncRelayCommand(StopBotAsync,
-            () =>  _isBotRunning && SelectedSink == AudioSinkType.DiscordBot);
+            () =>  _isBotRunning && SelectedSink.Type == AudioSinkType.DiscordBot);
+        
+        var availability = sinkAvailabilityService.GetAvailability();
+        SinkOptions = availability
+            .Select(a => new SinkOption(a.Type, a.IsAvailable, a.UnavailableReason))
+            .ToList();
+
+        _oldSink = SinkOptions.First(o => o.Type == AudioSinkType.Local);
+        SelectedSink = SinkOptions.First(o => o.Type == AudioSinkType.Local);
+        RaiseCommands();
     }
 
     // ════════════════════════════════════════════════════════════════════════════
@@ -177,28 +192,32 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     // Audio sink selection
     // ════════════════════════════════════════════════════════════════════════════
     
-    private bool CanAppySink() => _oldSinl != SelectedSink;
+    private bool CanAppySink() => _oldSink != SelectedSink;
 
     // ================================
 // Propiedad SelectedSink
 // ================================
-    private AudioSinkType _oldSinl = AudioSinkType.VirtualMic;
-    private AudioSinkType _selectedSink = AudioSinkType.VirtualMic;
+    private SinkOption _oldSink;
 
-    public AudioSinkType SelectedSink
+    private SinkOption _selectedSink;
+    public SinkOption SelectedSink
     {
         get => _selectedSink;
         set
         {
             if (Set(ref _selectedSink, value))
             {
-                OnPropertyChanged(nameof(IsBotSinkSelected));
-
-                // Notificar comandos
                 RaiseCommands();
+
+                // Advertencia inmediata al seleccionar un sink no disponible
+                if (!value.IsAvailable)
+                    SetFeedback(value.UnavailableReason ?? "Dispositivo no disponible.", isError: true);
+                else
+                    ClearFeedback();
             }
         }
     }
+
     
     
     // ================================
@@ -206,7 +225,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
 // ================================
     private bool CanApplySink()
     {
-        return _oldSinl != SelectedSink;
+        return _oldSink != SelectedSink;
     }
     
     // ================================
@@ -221,25 +240,30 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     
     
 
-    public bool IsBotSinkSelected => SelectedSink == AudioSinkType.DiscordBot;
+    public bool IsBotSinkSelected => SelectedSink?.Type == AudioSinkType.DiscordBot;
 
-    public IReadOnlyList<AudioSinkType> SinkOptions { get; } =
-        Enum.GetValues<AudioSinkType>().ToList();
+    public IReadOnlyList<SinkOption> SinkOptions { get; }
+
 
     public ICommand ApplySinkCommand { get; }
 
     private async Task ApplySinkAsync()
     {
-        if (SelectedSink == AudioSinkType.DiscordBot) return; // managed by Start/Stop bot
+        if (!SelectedSink.IsAvailable)
+        {
+            SetFeedback(SelectedSink.UnavailableReason ?? "Dispositivo no disponible.", isError: true);
+            return;
+        }
 
         try
         {
-            var sink = await _sinkFactory.Create(SelectedSink);
+            var sink = await _sinkFactory.Create(SelectedSink.Type);
             _messageService.UpdateSink(sink);
-            SetFeedback($"Sink cambiado a {SelectedSink}.", isError: false);
-            _oldSinl = SelectedSink;
-
+            SetFeedback($"Sink cambiado a {SelectedSink.Type}.", isError: false);
+            _oldSink = SelectedSink;
             RaiseCommands();
+            
+            OnPropertyChanged(nameof(IsBotSinkSelected));
 
         }
         catch (Exception ex)
@@ -297,16 +321,20 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
             return;
         }
 
+        // El sink ya fue creado por ApplySinkAsync cuando se seleccionó DiscordBot
+        if (_messageService.AudioSink is not DiscordAudioSink lifecycleSink)
+        {
+            SetFeedback("Selecciona 'DiscordBot' como sink antes de encender el bot.", isError: true);
+            return;
+        }
+
         try
         {
             var botConfig = new DiscordBotConfig(BotToken, guildId, channelId);
-            var sink      = await _sinkFactory.Create(AudioSinkType.DiscordBot, botConfig);
+            var info      = await lifecycleSink.StartAsync(botConfig);
 
-            _messageService.UpdateSink(sink);
             IsBotRunning = true;
-            SetFeedback("Bot conectado.", isError: false);
-
-            // Persist after successful connection so invalid credentials are never saved.
+            SetFeedback($"Conectado a '{info.GuildName} / {info.ChannelName}'.", isError: false);
             _ = PersistCurrentConfigAsync();
         }
         catch (Exception ex)
@@ -317,8 +345,9 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
 
     private async Task StopBotAsync()
     {
-        if (DefaultAudioSinkFactory.Client is { ConnectionState: Discord.ConnectionState.Connected })
-            await DefaultAudioSinkFactory.Client.StopAsync();
+        if (_messageService.AudioSink is not DiscordAudioSink audioSink) return;
+        
+        await audioSink.StopAsync();
 
         IsBotRunning = false;
         SetFeedback("Bot desconectado.", isError: false);
@@ -469,6 +498,16 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         field = value;
         OnPropertyChanged(name);
         return true;
+    }
+    
+    // Nuevo tipo de presentación — dentro de MainViewModel.cs o en su propio archivo
+    public sealed record SinkOption(AudioSinkType Type, bool IsAvailable, string? UnavailableReason)
+    {
+        public string DisplayName => IsAvailable
+            ? Type.ToString()
+            : $"{Type} (No disponible)";
+
+        public string? Tooltip => UnavailableReason;
     }
 
     // ════════════════════════════════════════════════════════════════════════════

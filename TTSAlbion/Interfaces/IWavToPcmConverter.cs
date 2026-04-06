@@ -46,7 +46,7 @@ public sealed class WavToPcmConverter : IWavToPcmConverter
         return pcm;
     }
 
-    private byte[] Convert2(byte[] wavBytes)
+    public byte[] Convert2(byte[] wavBytes)
     {
         using var ms = new MemoryStream(wavBytes);
         using var reader = new WaveFileReader(ms);

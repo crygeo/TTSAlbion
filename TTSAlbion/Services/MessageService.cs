@@ -22,7 +22,7 @@ public sealed class MessageService : IDisposable
     private readonly ICommandParser _commandParser;
     private readonly ITtsEngine _ttsEngine;
 
-    private IAudioSink _audioSink;
+    public IAudioSink AudioSink {get ; private set;}
     private readonly object _sinkLock = new();
 
     private volatile string? _registeredUser;
@@ -31,7 +31,7 @@ public sealed class MessageService : IDisposable
     {
         _commandParser = commandParser ?? throw new ArgumentNullException(nameof(commandParser));
         _ttsEngine = ttsEngine ?? throw new ArgumentNullException(nameof(ttsEngine));
-        _audioSink = audioSink ?? throw new ArgumentNullException(nameof(audioSink));
+        AudioSink = audioSink ?? throw new ArgumentNullException(nameof(audioSink));
     }
 
     // ── Configuration ────────────────────────────────────────────────────────────
@@ -49,8 +49,8 @@ public sealed class MessageService : IDisposable
         IAudioSink old;
         lock (_sinkLock)
         {
-            old = _audioSink;
-            _audioSink = newSink;
+            old = AudioSink;
+            AudioSink = newSink;
         }
 
         if (old is IDisposable d) d.Dispose();
@@ -106,7 +106,7 @@ public sealed class MessageService : IDisposable
         var wav = await _ttsEngine.SynthesizeAsync(payload).ConfigureAwait(false);
         if (wav.Length == 0) return;
 
-        await _audioSink.SendAsync(wav);
+        await AudioSink.SendAsync(wav);
     }
 
     // ── IDisposable ──────────────────────────────────────────────────────────────
@@ -114,6 +114,6 @@ public sealed class MessageService : IDisposable
     public void Dispose()
     {
         if (_ttsEngine is IDisposable td) td.Dispose();
-        if (_audioSink is IDisposable sd) sd.Dispose();
+        if (AudioSink is IDisposable sd) sd.Dispose();
     }
 }

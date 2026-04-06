@@ -386,17 +386,38 @@
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
 
-                                <ComboBox md:HintAssist.Hint="Tipo de salida"
-                                          md:HintAssist.IsFloating="True"
-                                          Style="{StaticResource MaterialDesignOutlinedComboBox}"
-                                          FontSize="13"
-                                          ItemsSource="{Binding SinkOptions}"
-                                          SelectedItem="{Binding SelectedSink}"/>
+                                <ComboBox ItemsSource="{Binding SinkOptions}"
+                                          SelectedItem="{Binding SelectedSink}"
+                                          Style="{StaticResource MaterialDesignOutlinedComboBox}">
+                                    <ComboBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding DisplayName}"
+                                                       ToolTip="{Binding Tooltip}">
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock">
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding IsAvailable}" Value="False">
+                                                                <Setter Property="Foreground" Value="Gray"/>
+                                                                <Setter Property="FontStyle" Value="Italic"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
+                                        </DataTemplate>
+                                    </ComboBox.ItemTemplate>
+                                    <ComboBox.ItemContainerStyle>
+                                        <Style TargetType="ComboBoxItem"
+                                               BasedOn="{StaticResource {x:Type ComboBoxItem}}">
+                                            <!-- No bloqueamos IsEnabled para permitir selección y mostrar el mensaje -->
+                                        </Style>
+                                    </ComboBox.ItemContainerStyle>
+                                </ComboBox>
 
                                 <Button Grid.Column="2"
                                         Content="Aplicar"
                                         Command="{Binding ApplySinkCommand}"
-                                        VerticalAlignment="Bottom" Visibility="{Binding IsBotSinkSelected, Converter={StaticResource InverseBooleanToVisibilityConverter}}" >
+                                        VerticalAlignment="Bottom" IsEnabled="{Binding SelectedSink.IsAvailable}">
                                     
                                 </Button>
                             </Grid>
