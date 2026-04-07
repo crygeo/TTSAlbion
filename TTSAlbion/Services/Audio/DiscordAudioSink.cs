@@ -47,7 +47,7 @@ public sealed class DiscordAudioSink : IAudioSink, IAsyncDisposable
         DiscordBotConfig config,
         CancellationToken ct = default)
     {
-        if (_state != SinkState.Uninitialized)
+        if (_state == SinkState.Starting ||  _state == SinkState.Connected)
             throw new InvalidOperationException(
                 $"El sink ya está en estado {_state}. Llama StopAsync() antes de reiniciar.");
 
@@ -59,7 +59,7 @@ public sealed class DiscordAudioSink : IAudioSink, IAsyncDisposable
             {
                 GatewayIntents           = GatewayIntents.Guilds | GatewayIntents.GuildVoiceStates,
                 DefaultRetryMode         = RetryMode.AlwaysRetry,
-                EnableVoiceDaveEncryption = true
+                EnableVoiceDaveEncryption = true,
             });
 
             // Ready gate
@@ -104,7 +104,7 @@ public sealed class DiscordAudioSink : IAudioSink, IAsyncDisposable
 
     public async Task StopAsync(CancellationToken ct = default)
     {
-        if (_state == SinkState.Stopped) return;
+        if (_state == SinkState.Stopped || _state == SinkState.Uninitialized) return;
 
         _state = SinkState.Stopped;
 
@@ -123,6 +123,7 @@ public sealed class DiscordAudioSink : IAudioSink, IAsyncDisposable
             _streamLock.Release();
         }
 
+        _state = SinkState.Uninitialized;
         await CleanupClientAsync().ConfigureAwait(false);
     }
 
@@ -130,7 +131,8 @@ public sealed class DiscordAudioSink : IAudioSink, IAsyncDisposable
 
     public async Task SendAsync(byte[] pcm, CancellationToken ct = default)
     {
-        if (_state != SinkState.Connected) return;
+        if (_state != SinkState.Connected) 
+            throw new InvalidOperationException($"El sink no está conectado. Estado actual: {_state}.");
 
         pcm = _converter.Convert(pcm);
         if (pcm.Length == 0) return;

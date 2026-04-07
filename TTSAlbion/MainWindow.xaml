@@ -456,6 +456,18 @@
                                              Style="{StaticResource OutlinedInputStyle}"
                                              Text="{Binding BotChannelId, UpdateSourceTrigger=PropertyChanged}"/>
                                 </Grid>
+                                
+                                <TextBlock Text="{Binding InfoBot}" Margin="0,0,0,5">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding InfoBot}" Value="">
+                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
 
                                 <!-- Start / Stop + indicador -->
                                 <StackPanel Orientation="Horizontal">

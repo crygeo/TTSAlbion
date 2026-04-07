@@ -264,7 +264,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
             RaiseCommands();
             
             OnPropertyChanged(nameof(IsBotSinkSelected));
-
+            InfoBot = "";
         }
         catch (Exception ex)
         {
@@ -280,6 +280,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     private string _botGuildId;
     private string _botChannelId;
     private bool   _isBotRunning;
+    private string _botInfo;
 
     public string BotToken
     {
@@ -310,6 +311,12 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         }
     }
 
+    public string InfoBot
+    {
+        get => _botInfo;
+        set =>  Set(ref _botInfo, value);
+    }
+
     public ICommand StartBotCommand { get; }
     public ICommand StopBotCommand  { get; }
 
@@ -334,6 +341,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
             var info      = await lifecycleSink.StartAsync(botConfig);
 
             IsBotRunning = true;
+            InfoBot = $"Servidor: {info.GuildName} - Canal: {info.ChannelName}";
             SetFeedback($"Conectado a '{info.GuildName} / {info.ChannelName}'.", isError: false);
             _ = PersistCurrentConfigAsync();
         }
@@ -350,6 +358,8 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         await audioSink.StopAsync();
 
         IsBotRunning = false;
+        InfoBot = "";
+        OnPropertyChanged(nameof(InfoBot));
         SetFeedback("Bot desconectado.", isError: false);
     }
 
@@ -400,6 +410,10 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         catch (OperationCanceledException)
         {
             SetFeedback("Envío cancelado.", isError: true);
+        }
+        catch (InvalidOperationException ex)
+        {
+            SetFeedback($"{ex.Message}", isError: true);
         }
         catch (Exception ex)
         {
