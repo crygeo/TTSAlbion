@@ -22,6 +22,14 @@ public sealed class SinkAvailabilityService : ISinkAvailabilityService
     public IReadOnlyList<SinkAvailability> GetAvailability()
     {
         var virtualMicAvailable = _detector.IsDeviceAvailable(VirtualCableDeviceName);
+        var hasPython = DiscordAudioSink.TryResolvePythonExecutable(out _, out var pythonReason);
+        var hasPythonScript = DiscordAudioSink.TryResolvePythonScriptPath(out _, out var scriptReason);
+        var discordBotAvailable = hasPython && hasPythonScript;
+        var discordBotReason = !hasPython
+            ? pythonReason
+            : !hasPythonScript
+                ? scriptReason
+                : null;
 
         return new[]
         {
@@ -29,7 +37,8 @@ public sealed class SinkAvailabilityService : ISinkAvailabilityService
             new SinkAvailability(AudioSinkType.VirtualMic, virtualMicAvailable,
                 virtualMicAvailable ? null :
                     "Requiere VB-Audio Virtual Cable. Descárgalo en vb-audio.com"),
-            new SinkAvailability(AudioSinkType.DiscordBot, IsAvailable: true),
+            new SinkAvailability(AudioSinkType.DiscordBot, discordBotAvailable,
+                discordBotAvailable ? null : discordBotReason),
         };
     }
 

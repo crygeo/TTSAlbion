@@ -15,6 +15,7 @@ public readonly struct Config
     // ── App ─────────────────────────────────────────────────────────────────────
     public string Prefix     { get; init; }
     public string User       { get; init; }
+    public ulong  UserId      { get; init; }
     
     public AudioSinkType AudioSinkType  { get; init; }
     
@@ -22,9 +23,6 @@ public readonly struct Config
 
     // ── Discord bot ──────────────────────────────────────────────────────────────
     public string BotToken        { get; init; }
-    public ulong  BotGuildId      { get; init; }
-    public ulong  BotVoiceChannelId { get; init; }
-
     public string PathAlbion { get; init; }
 
 }

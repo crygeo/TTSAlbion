@@ -25,6 +25,9 @@ public partial class App : Application
     {
         base.OnStartup(e);
 
+        var logPath = Path.Combine(AppContext.BaseDirectory, "ttsalbion.log");
+        FileConsoleLogger.Initialize(logPath);
+
         NativeDependencyGuard.Verify();
 
         // ── Settings repository ──────────────────────────────────────────────────
@@ -116,7 +119,6 @@ public partial class App : Application
         User            = string.Empty,
         PathAlbion      = string.Empty,
         BotToken        = string.Empty,
-        BotGuildId      = 0,
-        BotVoiceChannelId = 0,
+        UserId      = 0,
     };
 }

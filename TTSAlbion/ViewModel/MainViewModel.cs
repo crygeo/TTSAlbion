@@ -59,8 +59,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         // Seed UI from persisted config
         _prefixText   = commandParser.CurrentPrefix;          // already seeded from config in App.xaml.cs
         _botToken     = initialConfig.BotToken        ?? string.Empty;
-        _botGuildId   = initialConfig.BotGuildId      == 0 ? string.Empty : initialConfig.BotGuildId.ToString();
-        _botChannelId = initialConfig.BotVoiceChannelId == 0 ? string.Empty : initialConfig.BotVoiceChannelId.ToString();
+        _userId   = initialConfig.UserId      == 0 ? string.Empty : initialConfig.UserId.ToString();
         RegisteredUser = initialConfig.User ?? string.Empty;
         
         _eventHandler.SetTrackedUser(RegisteredUser);
@@ -277,8 +276,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     // ════════════════════════════════════════════════════════════════════════════
 
     private string _botToken;
-    private string _botGuildId;
-    private string _botChannelId;
+    private string _userId;
     private bool   _isBotRunning;
     private string _botInfo;
 
@@ -288,16 +286,10 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         set => Set(ref _botToken, value);
     }
 
-    public string BotGuildId
+    public string UserId
     {
-        get => _botGuildId;
-        set => Set(ref _botGuildId, value);
-    }
-
-    public string BotChannelId
-    {
-        get => _botChannelId;
-        set => Set(ref _botChannelId, value);
+        get => _userId;
+        set => Set(ref _userId, value);
     }
 
     public bool IsBotRunning
@@ -322,9 +314,9 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
 
     private async Task StartBotAsync()
     {
-        if (!TryParseDiscordIds(out var guildId, out var channelId))
+        if (!TryParseDiscordIds(out var userId))
         {
-            SetFeedback("Guild ID y Channel ID deben ser números válidos.", isError: true);
+            SetFeedback("User ID deben ser números válidos.", isError: true);
             return;
         }
 
@@ -337,37 +329,51 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
 
         try
         {
-            var botConfig = new DiscordBotConfig(BotToken, guildId, channelId);
+            var botConfig = new DiscordBotConfig(BotToken, userId);
             var info      = await lifecycleSink.StartAsync(botConfig);
 
             IsBotRunning = true;
-            InfoBot = $"Servidor: {info.GuildName} - Canal: {info.ChannelName}";
-            SetFeedback($"Conectado a '{info.GuildName} / {info.ChannelName}'.", isError: false);
+            InfoBot = $"Observando al usuario {info.UserName}";
+            SetFeedback($"Bot Conectado y observando a '{info.UserName}.", isError: false);
             _ = PersistCurrentConfigAsync();
+            RaiseCommands();
         }
         catch (Exception ex)
         {
             SetFeedback($"Error al conectar bot: {ex.Message}", isError: true);
+            Console.WriteLine($"[Bot] Start failed: {ex}");
+            RaiseCommands();
         }
     }
 
     private async Task StopBotAsync()
     {
         if (_messageService.AudioSink is not DiscordAudioSink audioSink) return;
-        
-        await audioSink.StopAsync();
 
         IsBotRunning = false;
         InfoBot = "";
         OnPropertyChanged(nameof(InfoBot));
-        SetFeedback("Bot desconectado.", isError: false);
+        RaiseCommands();
+
+        try
+        {
+            await audioSink.StopAsync();
+            SetFeedback("Bot desconectado.", isError: false);
+        }
+        catch (Exception ex)
+        {
+            SetFeedback($"Error al detener bot: {ex.Message}", isError: true);
+            Console.WriteLine($"[Bot] Stop failed: {ex}");
+        }
+        finally
+        {
+            RaiseCommands();
+        }
     }
 
-    private bool TryParseDiscordIds(out ulong guildId, out ulong channelId)
+    private bool TryParseDiscordIds(out ulong userId)
     {
-        channelId = 0;
-        return ulong.TryParse(_botGuildId.Trim(),    out guildId)
-            && ulong.TryParse(_botChannelId.Trim(),  out channelId);
+        return ulong.TryParse(_userId.Trim(), out userId);
     }
 
     // ════════════════════════════════════════════════════════════════════════════
@@ -437,15 +443,14 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     /// </summary>
     private async Task PersistCurrentConfigAsync()
     {
-        _ = TryParseDiscordIds(out var guildId, out var channelId);
+        _ = TryParseDiscordIds(out var userId);
 
         var config = new Config
         {
             Prefix            = PrefixText,
             User              = RegisteredUser ?? PlayerNameInput,
             BotToken          = _botToken,
-            BotGuildId        = guildId,
-            BotVoiceChannelId = channelId,
+            UserId        = userId,
             PathAlbion = _initialConfig.PathAlbion,
             // Preserve fields not managed by the ViewModel by reloading first.
             // This avoids overwriting PathAlbion or legacy fields with defaults.

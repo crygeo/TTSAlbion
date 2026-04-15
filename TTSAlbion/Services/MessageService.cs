@@ -1,6 +1,7 @@
 using TTSAlbion.Albion.Handler.Event.Model;
 using TTSAlbion.Interfaces;
 using TTSAlbion.Services.Audio;
+using System.Threading.Channels;
 
 namespace TTSAlbion.Services;
 
@@ -21,6 +22,10 @@ public sealed class MessageService : IDisposable
 {
     private readonly ICommandParser _commandParser;
     private readonly ITtsEngine _ttsEngine;
+    private readonly SemaphoreSlim _pipelineLock = new(1, 1);
+    private readonly Channel<string> _queue;
+    private readonly CancellationTokenSource _shutdown = new();
+    private readonly Task _worker;
 
     public IAudioSink AudioSink {get ; private set;}
     private readonly object _sinkLock = new();
@@ -32,6 +37,13 @@ public sealed class MessageService : IDisposable
         _commandParser = commandParser ?? throw new ArgumentNullException(nameof(commandParser));
         _ttsEngine = ttsEngine ?? throw new ArgumentNullException(nameof(ttsEngine));
         AudioSink = audioSink ?? throw new ArgumentNullException(nameof(audioSink));
+        _queue = Channel.CreateUnbounded<string>(new UnboundedChannelOptions
+        {
+            SingleReader = true,
+            SingleWriter = false,
+            AllowSynchronousContinuations = false
+        });
+        _worker = Task.Run(ProcessQueueAsync);
     }
 
     // ── Configuration ────────────────────────────────────────────────────────────
@@ -47,10 +59,18 @@ public sealed class MessageService : IDisposable
         ArgumentNullException.ThrowIfNull(newSink);
 
         IAudioSink old;
-        lock (_sinkLock)
+        _pipelineLock.Wait();
+        try
         {
-            old = AudioSink;
-            AudioSink = newSink;
+            lock (_sinkLock)
+            {
+                old = AudioSink;
+                AudioSink = newSink;
+            }
+        }
+        finally
+        {
+            _pipelineLock.Release();
         }
 
         if (old is IDisposable d) d.Dispose();
@@ -96,23 +116,83 @@ public sealed class MessageService : IDisposable
     // ================================
     public Task ExecuteAsync(string payload)
     {
-        return SynthesizeAndSendAsync(payload);
+        if (string.IsNullOrWhiteSpace(payload))
+            return Task.CompletedTask;
+
+        Console.WriteLine($"[MessageService] Enqueued payload len={payload.Length}");
+        return _queue.Writer.WriteAsync(payload, _shutdown.Token).AsTask();
     }
 
     // ── Internal pipeline ─────────────────────────────────────────────────────────
 
+    private async Task ProcessQueueAsync()
+    {
+        try
+        {
+            await foreach (var payload in _queue.Reader.ReadAllAsync(_shutdown.Token).ConfigureAwait(false))
+            {
+                try
+                {
+                    Console.WriteLine($"[MessageService] Dequeued payload len={payload.Length}");
+                    await SynthesizeAndSendAsync(payload).ConfigureAwait(false);
+                    Console.WriteLine($"[MessageService] Completed payload len={payload.Length}");
+                }
+                catch (OperationCanceledException) when (_shutdown.IsCancellationRequested)
+                {
+                    break;
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[MessageService] Queue item failed: {ex}");
+                }
+            }
+        }
+        catch (OperationCanceledException) when (_shutdown.IsCancellationRequested)
+        {
+            // shutdown normal
+        }
+    }
+
     private async Task SynthesizeAndSendAsync(string payload)
     {
-        var wav = await _ttsEngine.SynthesizeAsync(payload).ConfigureAwait(false);
-        if (wav.Length == 0) return;
+        var acquired = false;
+        try
+        {
+            await _pipelineLock.WaitAsync(_shutdown.Token).ConfigureAwait(false);
+            acquired = true;
 
-        await AudioSink.SendAsync(wav);
+            Console.WriteLine($"[MessageService] Synthesizing payload len={payload.Length}");
+            var wav = await _ttsEngine.SynthesizeAsync(payload, _shutdown.Token).ConfigureAwait(false);
+            Console.WriteLine($"[MessageService] Synthesized bytes={wav.Length}");
+            if (wav.Length == 0) return;
+
+            IAudioSink sink;
+            lock (_sinkLock)
+            {
+                sink = AudioSink;
+            }
+
+            Console.WriteLine($"[MessageService] Sending bytes={wav.Length} sink={sink.GetType().Name}");
+            await sink.SendAsync(wav, _shutdown.Token).ConfigureAwait(false);
+            Console.WriteLine($"[MessageService] Sent bytes={wav.Length} sink={sink.GetType().Name}");
+        }
+        finally
+        {
+            if (acquired)
+                _pipelineLock.Release();
+        }
     }
 
     // ── IDisposable ──────────────────────────────────────────────────────────────
 
     public void Dispose()
     {
+        _queue.Writer.TryComplete();
+        _shutdown.Cancel();
+        try { _worker.Wait(TimeSpan.FromSeconds(2)); }
+        catch { /* best-effort */ }
+        _shutdown.Dispose();
+        _pipelineLock.Dispose();
         if (_ttsEngine is IDisposable td) td.Dispose();
         if (AudioSink is IDisposable sd) sd.Dispose();
     }

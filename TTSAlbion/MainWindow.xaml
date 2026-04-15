@@ -438,24 +438,11 @@
                                          Text="{Binding BotToken, UpdateSourceTrigger=PropertyChanged}"
                                          Margin="0,0,0,10"/>
 
-                                <Grid Margin="0,0,0,12">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="10"/>
-                                        <ColumnDefinition Width="*"/>
-                                    </Grid.ColumnDefinitions>
-
-                                    <TextBox md:HintAssist.Hint="Guild ID"
+                                    <TextBox md:HintAssist.Hint="User ID"
                                              md:HintAssist.IsFloating="True"
                                              Style="{StaticResource OutlinedInputStyle}"
-                                             Text="{Binding BotGuildId, UpdateSourceTrigger=PropertyChanged}"/>
-
-                                    <TextBox Grid.Column="2"
-                                             md:HintAssist.Hint="Channel ID"
-                                             md:HintAssist.IsFloating="True"
-                                             Style="{StaticResource OutlinedInputStyle}"
-                                             Text="{Binding BotChannelId, UpdateSourceTrigger=PropertyChanged}"/>
-                                </Grid>
+                                             Text="{Binding UserId, UpdateSourceTrigger=PropertyChanged}"
+                                             Margin="0,0,0,10"/>
                                 
                                 <TextBlock Text="{Binding InfoBot}" Margin="0,0,0,5">
                                     <TextBlock.Style>
