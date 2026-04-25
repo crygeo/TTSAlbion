@@ -193,3 +193,10 @@ Albion packets
 | Newtonsoft.Json | MIT |
 | PhotonPackageParser | MIT |
 | VB-Audio Virtual Cable | Freeware / donationware |
+
+## Agradecimientos
+
+Un agradecimiento especial a [Triky313](https://github.com/Triky313) por su proyecto AlbionOnline-StatisticsAnalysis, el cual sirvió como referencia e inspiración para parte de la implementación.
+
+Repositorio:
+https://github.com/Triky313/AlbionOnline-StatisticsAnalysis
