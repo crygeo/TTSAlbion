@@ -55,6 +55,7 @@ public sealed class GenericEventHandler : PacketHandler<EventPacket>
     protected override Task OnHandleAsync(EventPacket packet)
     {
         _router.TryRoute((EventCodes)packet.EventCode, packet.Parameters);
+        Console.WriteLine($"[GenericEventHandler] Routed event code {(EventCodes)packet.EventCode}");
         return Task.CompletedTask;
     }
 

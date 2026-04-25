@@ -1,8 +1,7 @@
-﻿using System.Collections.Generic;
-using NetWorkLibrery.Interfazes;
+﻿using NetWorkLibrery.Interfazes;
 using NetWorkLibrery.Modelos;
-using PhotonPackageParser;
 using RequipAlbion.Network.Model;
+using PhotonParser = NetWorkLibrery.Modelos.PhotonParser;
 
 namespace TTSAlbion.Albion;
 
