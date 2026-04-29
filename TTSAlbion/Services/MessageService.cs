@@ -22,20 +22,26 @@ public sealed class MessageService : IDisposable
 {
     private readonly ICommandParser _commandParser;
     private readonly ITtsEngine _ttsEngine;
+    private readonly ITranslatorService _translator;
     private readonly SemaphoreSlim _pipelineLock = new(1, 1);
     private readonly Channel<string> _queue;
     private readonly CancellationTokenSource _shutdown = new();
     private readonly Task _worker;
+
+    public required bool UseTraslate;
+    public required string SourceLang;
+    public required string TargetLang;
 
     public IAudioSink AudioSink {get ; private set;}
     private readonly object _sinkLock = new();
 
     private volatile string? _registeredUser;
 
-    public MessageService(ICommandParser commandParser, ITtsEngine ttsEngine, IAudioSink audioSink)
+    public MessageService(ICommandParser commandParser, ITtsEngine ttsEngine, IAudioSink audioSink, ITranslatorService translator)
     {
         _commandParser = commandParser ?? throw new ArgumentNullException(nameof(commandParser));
         _ttsEngine = ttsEngine ?? throw new ArgumentNullException(nameof(ttsEngine));
+        _translator = translator ?? throw new ArgumentNullException(nameof(translator));
         AudioSink = audioSink ?? throw new ArgumentNullException(nameof(audioSink));
         _queue = Channel.CreateUnbounded<string>(new UnboundedChannelOptions
         {
@@ -114,13 +120,13 @@ public sealed class MessageService : IDisposable
     // ================================
     // Ejecución pura (single responsibility)
     // ================================
-    public Task ExecuteAsync(string payload)
+    public async Task ExecuteAsync(string payload)
     {
         if (string.IsNullOrWhiteSpace(payload))
-            return Task.CompletedTask;
+            return;
 
         Console.WriteLine($"[MessageService] Enqueued payload len={payload.Length}");
-        return _queue.Writer.WriteAsync(payload, _shutdown.Token).AsTask();
+        await _queue.Writer.WriteAsync(payload, _shutdown.Token).AsTask();
     }
 
     // ── Internal pipeline ─────────────────────────────────────────────────────────
@@ -160,6 +166,16 @@ public sealed class MessageService : IDisposable
         {
             await _pipelineLock.WaitAsync(_shutdown.Token).ConfigureAwait(false);
             acquired = true;
+
+            if (UseTraslate)
+            {
+                Console.WriteLine($"[MessageService] Translating payload len={payload.Length} source={SourceLang} target={TargetLang}");
+                payload = await _translator.TranslateAsync(payload, SourceLang, TargetLang, _shutdown.Token).ConfigureAwait(false);
+                Console.WriteLine($"[MessageService] Translated payload len={payload.Length}");
+            }
+
+            if (string.IsNullOrWhiteSpace(payload))
+                return;
 
             Console.WriteLine($"[MessageService] Synthesizing payload len={payload.Length}");
             var wav = await _ttsEngine.SynthesizeAsync(payload, _shutdown.Token).ConfigureAwait(false);

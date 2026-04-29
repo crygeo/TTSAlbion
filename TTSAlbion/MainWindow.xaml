@@ -372,6 +372,45 @@
                         </Grid>
                     </md:Card>
 
+                    <!-- ════════════ TRADUCCIÓN ════════════ -->
+                    <TextBlock Text="TRADUCCIÓN" Style="{StaticResource SectionLabelStyle}"/>
+
+                    <md:Card Style="{StaticResource ContentCardStyle}">
+                        <StackPanel>
+                            <CheckBox Content="Traducir antes de hablar"
+                                      IsChecked="{Binding UseTranslate}"
+                                      FontSize="12"
+                                      Margin="0,0,0,14"/>
+
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="10"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+
+                                <!-- Origen -->
+                                <ComboBox ItemsSource="{Binding Languages}"
+                                         SelectedValuePath="Code"
+                                         DisplayMemberPath="Name"
+                                         SelectedValue="{Binding SourceLang, Mode=TwoWay}"
+                                         IsEnabled="{Binding UseTranslate}"/>
+
+                                <!-- Destino -->
+                                <ComboBox Grid.Column="2"
+                                          ItemsSource="{Binding Languages}"
+                                          SelectedValuePath="Code"
+                                          DisplayMemberPath="Name"
+                                          SelectedValue="{Binding TargetLang, Mode=TwoWay}"
+                                          IsEnabled="{Binding UseTranslate}"/>
+                            </Grid>
+
+                            <TextBlock Text="Los cambios se guardan automáticamente."
+                                       Margin="0,10,0,0"
+                                       Style="{StaticResource MaterialDesignCaptionTextBlock}"/>
+                        </StackPanel>
+                    </md:Card>
+
                     <!-- ════════════ SALIDA DE AUDIO ════════════ -->
                     <TextBlock Text="SALIDA DE AUDIO" Style="{StaticResource SectionLabelStyle}"/>
 

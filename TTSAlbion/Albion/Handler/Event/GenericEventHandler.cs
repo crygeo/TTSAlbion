@@ -28,18 +28,10 @@ public sealed class GenericEventHandler : PacketHandler<EventPacket>
     public GenericEventHandler(MessageService messageService)
     {
         // ChatMessage (zone / global chat)
-        _router.Subscribe<MessageModel>(EventCodes.ChatMessage, model =>
-        {
-            if ((_sourceFilter & MessageSourceFilter.ChatMessage) == 0) return;
-            DispatchIfTracked(model, messageService);
-        });
+        _router.Subscribe<MessageModel>(EventCodes.ChatMessage, model => DispatchIfTracked(model, messageService));
 
         // ChatSay (/say in world)
-        _router.Subscribe<ChatSayModel>(EventCodes.ChatSay, model =>
-        {
-            if ((_sourceFilter & MessageSourceFilter.ChatSay) == 0) return;
-            DispatchIfTracked(model, messageService);
-        });
+        _router.Subscribe<ChatSayModel>(EventCodes.ChatSay, model => DispatchIfTracked(model, messageService));
     }
 
     // ── Public API ───────────────────────────────────────────────────────────────
@@ -63,9 +55,10 @@ public sealed class GenericEventHandler : PacketHandler<EventPacket>
 
     private void DispatchIfTracked(MessageModel model, MessageService messageService)
     {
-        var tracked = _trackedUser;
-        if (tracked is null) return;
-        if (!model.User.Equals(tracked, StringComparison.OrdinalIgnoreCase)) return;
+        
+        if ((_sourceFilter & MessageSourceFilter.ChatMessage) == 0) return;
+        if (_trackedUser is null) return;
+        if (!model.User.Equals(_trackedUser, StringComparison.OrdinalIgnoreCase)) return;
 
         _ = messageService.RunCommandAsync(model)
                           .ContinueWith(
@@ -75,9 +68,9 @@ public sealed class GenericEventHandler : PacketHandler<EventPacket>
     
     private void DispatchIfTracked(ChatSayModel model, MessageService messageService)
     {
-        var tracked = _trackedUser;
-        if (tracked is null) return;
-        if (!model.User.Equals(tracked, StringComparison.OrdinalIgnoreCase)) return;
+        if ((_sourceFilter & MessageSourceFilter.ChatSay) == 0) return;
+        if (_trackedUser is null) return;
+        if (!model.User.Equals(_trackedUser, StringComparison.OrdinalIgnoreCase)) return;
 
         _ = messageService.RunCommandAsync(model)
             .ContinueWith(

@@ -7,8 +7,8 @@ namespace TTSAlbion.Albion;
 [Flags]
 public enum MessageSourceFilter
 {
-    None       = 0,
-    ChatMessage = 1,   // EventCodes.ChatMessage — chat de zona/global
-    ChatSay    = 2,    // EventCodes.ChatSay    — /say en mundo
+    None,
+    ChatMessage,   // EventCodes.ChatMessage — chat de zona/global
+    ChatSay,    // EventCodes.ChatSay    — /say en mundo
     Both       = ChatMessage | ChatSay
 }

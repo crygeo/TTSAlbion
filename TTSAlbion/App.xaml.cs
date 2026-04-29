@@ -1,4 +1,5 @@
 ﻿using System.IO;
+using System.Net.Http;
 using System.Windows;
 using NetWorkLibrery.Interfazes;
 using NetWorkLibrery.Models;
@@ -28,7 +29,6 @@ public partial class App : Application
         var logPath = Path.Combine(AppContext.BaseDirectory, "ttsalbion.log");
         FileConsoleLogger.Initialize(logPath);
 
-        NativeDependencyGuard.Verify();
 
         // ── Settings repository ──────────────────────────────────────────────────
         // Single source of truth for persistence. Injected everywhere it is needed.
@@ -39,28 +39,39 @@ public partial class App : Application
         var config = settingsRepo.Load() ?? DefaultConfig();
 
         // ── Audio pipeline ───────────────────────────────────────────────────────
-        ITtsEngine ttsEngine          = new WindowsTtsEngine();
+        ITtsEngine ttsEngine = new WindowsTtsEngine();
         IAudioSinkFactory sinkFactory = new DefaultAudioSinkFactory();
 
         // Default sink on startup: VirtualMic (user can change at runtime).
         IAudioSink initialSink = await sinkFactory.Create(AudioSinkType.Local);
 
         // ── Command parser ───────────────────────────────────────────────────────
-        ICommandParser commandParser = new CommandParser(string.IsNullOrWhiteSpace(config.Prefix) ? "!!" : config.Prefix);
+        ICommandParser commandParser =
+            new CommandParser(string.IsNullOrWhiteSpace(config.Prefix) ? "!!" : config.Prefix);
 
+        
+        // ── Translator ───────────────────────────────────────────────────────────────
+        HttpClient client = new HttpClient();
+        LangblyTranslatorService translator = new LangblyTranslatorService(client, config.TranslatorOptions);
+        
         // ── Message service ──────────────────────────────────────────────────────
-        var messageService = new MessageService(commandParser, ttsEngine, initialSink);
+        var messageService = new MessageService(commandParser, ttsEngine, initialSink, translator)
+        {
+            SourceLang = config.SourceLang,
+            TargetLang = config.TargetLang,
+            UseTraslate = config.UseTraslate,
+        };
 
         // ── Network event handler ────────────────────────────────────────────────
         var eventHandler = new GenericEventHandler(messageService);
-        eventHandler.SetTrackedUser(string.IsNullOrWhiteSpace(config.User) ? null : config.User);
-        eventHandler.SetSourceFilter(MessageSourceFilter.ChatMessage | MessageSourceFilter.ChatSay);
+        eventHandler.SetTrackedUser(string.IsNullOrWhiteSpace(config.UserInGame) ? null : config.UserInGame);
+        eventHandler.SetSourceFilter(config.MessageSourceFilter);
 
         var deviceDetector = new NaudioDeviceDetector();
         var sinkAvailability = new SinkAvailabilityService(deviceDetector);
-        
+
         var virtualMicStatus = sinkAvailability.GetAvailability()
-            .First(x => x.Type == AudioSinkType.Local);
+            .First(x => x.Type == config.AudioSinkType);
 
         string? initialStartupWarning = string.Empty;
         if (!virtualMicStatus.IsAvailable)
@@ -70,7 +81,7 @@ public partial class App : Application
             initialStartupWarning = virtualMicStatus.UnavailableReason;
         }
 
-        
+
         // ── ViewModel — receives both the factory deps and the loaded config ─────
         var viewModel = new MainViewModel(
             messageService,
@@ -78,14 +89,14 @@ public partial class App : Application
             commandParser,
             sinkFactory,
             settingsRepo,
-            config, 
+            config,
             sinkAvailability,
-            initialStartupWarning);           // <-- seeds UI fields from persisted values
+            initialStartupWarning); // <-- seeds UI fields from persisted values
 
         // ── Albion network ───────────────────────────────────────────────────────
-        var resolver   = new AlbionPortResolver(config.PathAlbion);
+        var resolver = new AlbionPortResolver(config.PathAlbion);
         var portFilter = new ResolvedPortFilter(resolver, TimeSpan.FromSeconds(15));
-        var parser     = new AlbionParser();
+        var parser = new AlbionParser();
 
         _networkManager = new NetworkManager(
             parser,
@@ -107,7 +118,7 @@ public partial class App : Application
     protected override void OnExit(ExitEventArgs e)
     {
         _networkManager?.Stop();
-        
+
         base.OnExit(e);
     }
 
@@ -115,10 +126,24 @@ public partial class App : Application
 
     private static Config DefaultConfig() => new()
     {
-        Prefix          = "!!",
-        User            = string.Empty,
-        PathAlbion      = string.Empty,
-        BotToken        = string.Empty,
-        UserId      = 0,
+        Prefix = "!!",
+        UserInGame = string.Empty,
+        UserIdDiscord = 0,
+
+        MessageSourceFilter = MessageSourceFilter.ChatMessage | MessageSourceFilter.ChatSay,
+        AudioSinkType = AudioSinkType.Local,
+
+        UseTraslate = false,
+        SourceLang = "en",
+        TargetLang = "es",
+        TranslatorOptions = new TranslatorOptions
+        {
+            ApiKey = string.Empty,
+            BaseUrl = "https://api.langbly.com",
+        },
+
+        BotToken = string.Empty,
+
+        PathAlbion = "C:\\...\\Albion-Online.exe",
     };
 }

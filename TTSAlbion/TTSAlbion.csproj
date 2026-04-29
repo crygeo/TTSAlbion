@@ -21,9 +21,6 @@
 
 	<ItemGroup>
 		<!-- Audio / TTS / Network -->
-		<PackageReference Include="Discord.Net.WebSocket" Version="3.19.1" />
-		<PackageReference Include="libsodium" Version="1.0.21" />
-		<PackageReference Include="Opus" Version="1.0.0" />
 		<PackageReference Include="NAudio" Version="2.3.0" />
 		<PackageReference Include="Newtonsoft.Json" Version="13.0.5-beta1" />
 		<PackageReference Include="PhotonPackageParser" Version="4.1.0" />

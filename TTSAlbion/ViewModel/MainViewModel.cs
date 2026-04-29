@@ -34,6 +34,23 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     private readonly IAudioSinkFactory   _sinkFactory;
     private readonly ISettingsRepository _settingsRepo;
     private readonly Config _initialConfig;
+    private CancellationTokenSource? _translationSaveCts;
+
+    public IEnumerable<LanguageItem> Languages { get; set; } =
+        [
+            new LanguageItem("en", "English"),
+            new LanguageItem("es", "Spanish"),
+            new LanguageItem("fr", "French"),
+            new LanguageItem("de", "German"),
+            new LanguageItem("it", "Italian"),
+            new LanguageItem("pt", "Portuguese"),
+            new LanguageItem("ru", "Russian"),
+            new LanguageItem("ja", "Japanese"),
+            new LanguageItem("zh", "Chinese"),
+            
+        ];
+    
+   
 
     public MainViewModel(
         MessageService       messageService,
@@ -59,10 +76,17 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         // Seed UI from persisted config
         _prefixText   = commandParser.CurrentPrefix;          // already seeded from config in App.xaml.cs
         _botToken     = initialConfig.BotToken        ?? string.Empty;
-        _userId   = initialConfig.UserId      == 0 ? string.Empty : initialConfig.UserId.ToString();
-        RegisteredUser = initialConfig.User ?? string.Empty;
-        
+        _userId   = initialConfig.UserIdDiscord      == 0 ? string.Empty : initialConfig.UserIdDiscord.ToString();
+        RegisteredUser = string.IsNullOrWhiteSpace(initialConfig.UserInGame) ? null : initialConfig.UserInGame;
+        _listenChatMessage = initialConfig.MessageSourceFilter.HasFlag(MessageSourceFilter.ChatMessage);
+        _listenChatSay = initialConfig.MessageSourceFilter.HasFlag(MessageSourceFilter.ChatSay);
+        filter = initialConfig.MessageSourceFilter;
+        _useTranslate = initialConfig.UseTraslate;
+        _sourceLang = string.IsNullOrWhiteSpace(initialConfig.SourceLang) ? "en" : initialConfig.SourceLang;
+        _targetLang = string.IsNullOrWhiteSpace(initialConfig.TargetLang) ? "es" : initialConfig.TargetLang;
+
         _eventHandler.SetTrackedUser(RegisteredUser);
+        ApplyTranslatorSettings(save: false);
 
         // Commands
         SpeakCommand       = new AsyncRelayCommand(ExecuteSpeakAsync,  CanSpeak);
@@ -79,8 +103,11 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
             .Select(a => new SinkOption(a.Type, a.IsAvailable, a.UnavailableReason))
             .ToList();
 
-        _oldSink = SinkOptions.First(o => o.Type == AudioSinkType.Local);
-        SelectedSink = SinkOptions.First(o => o.Type == AudioSinkType.Local);
+        var initialSinkType = SinkOptions.Any(o => o.Type == initialConfig.AudioSinkType)
+            ? initialConfig.AudioSinkType
+            : AudioSinkType.Local;
+        _oldSink = SinkOptions.First(o => o.Type == initialSinkType);
+        _selectedSink = _oldSink;
         RaiseCommands();
     }
 
@@ -103,7 +130,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         private set { Set(ref _registeredUser, value); OnPropertyChanged(nameof(HasUser)); }
     }
 
-    public bool HasUser => _registeredUser is not null;
+    public bool HasUser => !string.IsNullOrWhiteSpace(_registeredUser);
 
     public ICommand ApplyUserCommand { get; }
 
@@ -120,7 +147,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         _eventHandler.SetTrackedUser(name);
         
         PlayerNameInput = string.Empty;
-        _ = PersistCurrentConfigAsync();   // fire-and-forget
+        _ = PersistCurrentConfigAsync(); // save User config
 
         
     }
@@ -144,12 +171,83 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         set { Set(ref _listenChatSay, value); ApplySourceFilter(); }
     }
 
+    private MessageSourceFilter filter = MessageSourceFilter.None; 
     private void ApplySourceFilter()
     {
-        var filter = MessageSourceFilter.None;
+        filter = MessageSourceFilter.None;
+        
         if (_listenChatMessage) filter |= MessageSourceFilter.ChatMessage;
         if (_listenChatSay)     filter |= MessageSourceFilter.ChatSay;
         _eventHandler.SetSourceFilter(filter);
+        _ = PersistCurrentConfigAsync(); // save Filter config
+    }
+
+    // ════════════════════════════════════════════════════════════════════════════
+    // Translation
+    // ════════════════════════════════════════════════════════════════════════════
+
+    private bool _useTranslate;
+    private string _sourceLang = "en";
+    private string _targetLang = "es";
+
+    public bool UseTranslate
+    {
+        get => _useTranslate;
+        set
+        {
+            if (!Set(ref _useTranslate, value)) return;
+            ApplyTranslatorSettings();
+        }
+    }
+
+    public string SourceLang
+    {
+        get => _sourceLang;
+        set
+        {
+            if (!Set(ref _sourceLang, value)) return;
+            ApplyTranslatorSettings();
+        }
+    }
+
+    public string TargetLang
+    {
+        get => _targetLang;
+        set
+        {
+            if (!Set(ref _targetLang, value)) return;
+            ApplyTranslatorSettings();
+        }
+    }
+
+    private void ApplyTranslatorSettings(bool save = true)
+    {
+        _messageService.UseTraslate = _useTranslate;
+        _messageService.SourceLang = string.IsNullOrWhiteSpace(_sourceLang) ? "en" : _sourceLang.Trim();
+        _messageService.TargetLang = string.IsNullOrWhiteSpace(_targetLang) ? "es" : _targetLang.Trim();
+
+        if (save)
+            ScheduleTranslationConfigSave();
+    }
+
+    private void ScheduleTranslationConfigSave()
+    {
+        _translationSaveCts?.Cancel();
+        _translationSaveCts?.Dispose();
+        _translationSaveCts = new CancellationTokenSource();
+        var token = _translationSaveCts.Token;
+
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await Task.Delay(500, token).ConfigureAwait(false);
+                await PersistCurrentConfigAsync().ConfigureAwait(false);
+            }
+            catch (OperationCanceledException)
+            {
+            }
+        }, token);
     }
 
     // ════════════════════════════════════════════════════════════════════════════
@@ -179,7 +277,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
             _commandParser.SetPrefix(prefix);
             SetFeedback("Prefijo actualizado.", isError: false);
             ((RelayCommand)ApplyPrefixCommand).RaiseCanExecuteChanged();
-            _ = PersistCurrentConfigAsync();   // fire-and-forget
+            _ = PersistCurrentConfigAsync(); // save Prefix config
         }
         catch (ArgumentException ex)
         {
@@ -264,6 +362,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
             
             OnPropertyChanged(nameof(IsBotSinkSelected));
             InfoBot = "";
+            _ = PersistCurrentConfigAsync(); // save Sink config
         }
         catch (Exception ex)
         {
@@ -278,7 +377,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     private string _botToken;
     private string _userId;
     private bool   _isBotRunning;
-    private string _botInfo;
+    private string _botInfo = string.Empty;
 
     public string BotToken
     {
@@ -335,7 +434,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
             IsBotRunning = true;
             InfoBot = $"Observando al usuario {info.UserName}";
             SetFeedback($"Bot Conectado y observando a '{info.UserName}.", isError: false);
-            _ = PersistCurrentConfigAsync();
+            _ = PersistCurrentConfigAsync(); // save Token and UserId config
             RaiseCommands();
         }
         catch (Exception ex)
@@ -448,10 +547,19 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         var config = new Config
         {
             Prefix            = PrefixText,
-            User              = RegisteredUser ?? PlayerNameInput,
+            UserInGame              = RegisteredUser ?? PlayerNameInput,
+            UserIdDiscord        = userId,
+            
+            MessageSourceFilter = filter,
+            AudioSinkType = _selectedSink.Type,
+            UseTraslate = _useTranslate,
+            SourceLang = string.IsNullOrWhiteSpace(_sourceLang) ? "en" : _sourceLang.Trim(),
+            TargetLang = string.IsNullOrWhiteSpace(_targetLang) ? "es" : _targetLang.Trim(),
+            TranslatorOptions = _initialConfig.TranslatorOptions,
+            
             BotToken          = _botToken,
-            UserId        = userId,
             PathAlbion = _initialConfig.PathAlbion,
+            
             // Preserve fields not managed by the ViewModel by reloading first.
             // This avoids overwriting PathAlbion or legacy fields with defaults.
         };
@@ -535,6 +643,8 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
 
     public void Dispose()
     {
+        _translationSaveCts?.Cancel();
+        _translationSaveCts?.Dispose();
         if (_messageService is IDisposable sd) sd.Dispose();
     }
 }

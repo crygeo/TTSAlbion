@@ -17,6 +17,53 @@ Actualmente se distribuye una sola versión:
 
 ---
 
+## 🌐 Traducción de mensajes
+
+Se ha añadido soporte opcional para traducir mensajes antes de generar el TTS.
+
+### Configuración
+
+| Campo | Descripción |
+|---|---|
+| `UseTranslate` | Activa o desactiva la traducción |
+| `Idioma origen` | Código del idioma de entrada (`en`, `es`, etc.) |
+| `Idioma destino` | Código del idioma a traducir |
+
+Los idiomas ahora se seleccionan desde una lista en la UI (no manualmente).
+
+### Idiomas soportados (UI)
+
+| Código | Idioma |
+|---|---|
+| en | Inglés |
+| es | Español |
+| fr | Francés |
+| de | Alemán |
+| it | Italiano |
+| pt | Portugués |
+| ru | Ruso |
+| ja | Japonés |
+| zh | Chino |
+
+### Flujo actualizado
+
+```text
+Albion packets
+  -> parser Photon
+  -> event handler
+  -> MessageService
+     -> (opcional) TranslationService
+  -> ITtsEngine
+  -> IAudioSink
+```
+
+### Notas
+
+- La traducción se realiza antes del TTS.
+- Si falla la API de traducción, el mensaje original se usa como fallback.
+- Requiere configuración de API Key externa.
+
+
 ## ¿Qué hace?
 
 TTSAlbion:

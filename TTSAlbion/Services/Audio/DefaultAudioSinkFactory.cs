@@ -1,6 +1,3 @@
-using Discord;
-using Discord.WebSocket;
-using NAudio.Wave;
 using TTSAlbion.Interfaces;
 
 namespace TTSAlbion.Services.Audio;
