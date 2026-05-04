@@ -4,7 +4,7 @@ using System.IO;
 using System.Speech.Synthesis;
 using TTSAlbion.Interfaces;
 
-namespace TTSAlbion.Services.Tts;
+namespace TTSAlbion.Services;
 
 /// <summary>
 /// Windows SAPI implementation. No external dependencies.

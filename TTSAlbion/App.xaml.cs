@@ -1,20 +1,19 @@
 ﻿using System.IO;
 using System.Net.Http;
 using System.Windows;
-using NetWorkLibrery.Interfazes;
-using NetWorkLibrery.Models;
-using TTSAlbion.Albion;
-using TTSAlbion.Albion.Handler.Request;
-using TTSAlbion.Albion.Handler.Response;
+using LibAlbionProtocol.Models;
+using LibAlbionProtocol.Parsing;
+using LibAlbionRouting.Dispatching;
+using LibAlbionRouting.Handlers;
+using LibNetWork.Interfaces;
+using LibNetWork.Networking;
 using TTSAlbion.Converters;
 using TTSAlbion.Datos;
 using TTSAlbion.Infrastructure;
 using TTSAlbion.Interfaces;
 using TTSAlbion.Services;
 using TTSAlbion.Services.Audio;
-using TTSAlbion.Services.Tts;
-using TTSAlbion.ViewModels;
-using NetWorkLibrery.Modelos;
+using TTSAlbion.ViewModel;
 
 namespace TTSAlbion;
 
@@ -54,6 +53,8 @@ public partial class App : Application
         HttpClient client = new HttpClient();
         LangblyTranslatorService translator = new LangblyTranslatorService(client, config.TranslatorOptions);
         
+        IEventDispatcher eventDispatcher = new GenericEventHandler();
+        
         // ── Message service ──────────────────────────────────────────────────────
         var messageService = new MessageService(commandParser, ttsEngine, initialSink, translator)
         {
@@ -61,12 +62,34 @@ public partial class App : Application
             TargetLang = config.TargetLang,
             UseTraslate = config.UseTraslate,
         };
+        
+        var chatListener = new ChatEventListener(eventDispatcher, commandParser, messageService.ExecuteAsync);
+        chatListener.SetTrackedUser(config.UserInGame);
+        chatListener.SetSourceFilter(config.MessageSourceFilter);
+        
+        // ── Logger opcional
+        var eventLogger = new AlbionEventLogger(eventDispatcher);
 
-        // ── Network event handler ────────────────────────────────────────────────
-        var eventHandler = new GenericEventHandler(messageService);
-        eventHandler.SetTrackedUser(string.IsNullOrWhiteSpace(config.UserInGame) ? null : config.UserInGame);
-        eventHandler.SetSourceFilter(config.MessageSourceFilter);
+        
 
+        // ── Red ────────────────────────────────────────────────────────────────
+        var resolver = new AlbionPortResolver(config.PathAlbion);
+        var portFilter = new ResolvedPortFilter(resolver, TimeSpan.FromSeconds(15));
+        var parser = new AlbionParser();
+        
+        var handlers = new IPacketHandler[]
+        {
+            eventDispatcher,               
+            new GenericRequestHandler(),                           
+            new GenericResponseHandler()                           
+        };
+        
+        _networkManager = new NetworkManager(parser, handlers, portFilter);  
+
+        
+        // ── Sink Detector ────────────────────────────────────────────────
+
+        
         var deviceDetector = new NaudioDeviceDetector();
         var sinkAvailability = new SinkAvailabilityService(deviceDetector);
 
@@ -80,12 +103,11 @@ public partial class App : Application
             // para no bloquear startup. El ViewModel lo expone en su estado inicial.
             initialStartupWarning = virtualMicStatus.UnavailableReason;
         }
-
-
+        
         // ── ViewModel — receives both the factory deps and the loaded config ─────
         var viewModel = new MainViewModel(
             messageService,
-            eventHandler,
+            chatListener,
             commandParser,
             sinkFactory,
             settingsRepo,
@@ -93,26 +115,19 @@ public partial class App : Application
             sinkAvailability,
             initialStartupWarning); // <-- seeds UI fields from persisted values
 
-        // ── Albion network ───────────────────────────────────────────────────────
-        var resolver = new AlbionPortResolver(config.PathAlbion);
-        var portFilter = new ResolvedPortFilter(resolver, TimeSpan.FromSeconds(15));
-        var parser = new AlbionParser();
+        
+        
+       
 
-        _networkManager = new NetworkManager(
-            parser,
-            new IPacketHandler[]
-            {
-                eventHandler,
-                new GenericRequestHandler(),
-                new GenericResponseHandler()
-            },
-            portFilter);
+
 
         _networkManager.Start();
 
         // ── Window ───────────────────────────────────────────────────────────────
         new MainWindow(viewModel).Show();
         // new MainWindowV2(viewModel).Show();
+        
+        
     }
 
     protected override void OnExit(ExitEventArgs e)

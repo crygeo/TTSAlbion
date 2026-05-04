@@ -3,7 +3,7 @@
 using System.IO;
 using NAudio.Wave;
 
-namespace TTSAlbion.Services.Audio;
+namespace TTSAlbion.Interfaces;
 
 public interface IWavToPcmConverter
 {

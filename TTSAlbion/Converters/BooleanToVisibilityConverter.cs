@@ -1,9 +1,8 @@
-﻿using System;
-using System.Globalization;
+﻿using System.Globalization;
 using System.Windows;
 using System.Windows.Data;
 
-namespace Utilidades.Converters;
+namespace TTSAlbion.Converters;
 
 public class BooleanToVisibilityConverter : IValueConverter
 {

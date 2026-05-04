@@ -1,9 +1,9 @@
 // Infrastructure.Audio
 
-using System.IO;
 using NAudio.Wave;
 using TTSAlbion.Interfaces;
-using TTSAlbion.Services.Audio;
+
+namespace TTSAlbion.Services.Audio;
 
 public sealed class LocalAudioSink : IAudioSink, IDisposable
 {
@@ -38,4 +38,3 @@ public sealed class LocalAudioSink : IAudioSink, IDisposable
         _output.Dispose();
     }
 }
-

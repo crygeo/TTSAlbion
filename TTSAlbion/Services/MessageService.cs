@@ -1,7 +1,7 @@
-using TTSAlbion.Albion.Handler.Event.Model;
 using TTSAlbion.Interfaces;
 using TTSAlbion.Services.Audio;
 using System.Threading.Channels;
+using LibAlbionProtocol.PacketModels;
 
 namespace TTSAlbion.Services;
 

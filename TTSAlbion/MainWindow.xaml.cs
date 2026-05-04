@@ -1,7 +1,7 @@
 ﻿using System.Windows;
 using System.Windows.Input;
 using MahApps.Metro.Controls;
-using TTSAlbion.ViewModels;
+using TTSAlbion.ViewModel;
 
 namespace TTSAlbion;
 

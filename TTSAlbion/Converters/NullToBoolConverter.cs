@@ -1,9 +1,9 @@
-namespace Utilidades.Converters;
-
-// Namespace sugerido: Infrastructure.Converters
-using System;
 using System.Globalization;
 using System.Windows.Data;
+
+namespace TTSAlbion.Converters;
+
+// Namespace sugerido: Infrastructure.Converters
 
 public sealed class NullToBoolConverter : IValueConverter
 {

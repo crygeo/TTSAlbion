@@ -1,15 +1,14 @@
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Windows.Input;
-using TTSAlbion.Albion;
+using LibAlbionProtocol.Models;
+using LibAlbionRouting.Handlers;
 using TTSAlbion.Datos;
 using TTSAlbion.Interfaces;
 using TTSAlbion.Services;
 using TTSAlbion.Services.Audio;
-using TTSAlbion.ViewModel;
-using AsyncRelayCommand = TTSAlbion.ViewModel.AsyncRelayCommand;
 
-namespace TTSAlbion.ViewModels;
+namespace TTSAlbion.ViewModel;
 
 /// <summary>
 /// Main ViewModel.
@@ -29,7 +28,7 @@ namespace TTSAlbion.ViewModels;
 public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
 {
     private readonly MessageService      _messageService;
-    private readonly GenericEventHandler _eventHandler;
+    private readonly ChatEventListener  _chatListener;
     private readonly ICommandParser      _commandParser;
     private readonly IAudioSinkFactory   _sinkFactory;
     private readonly ISettingsRepository _settingsRepo;
@@ -54,7 +53,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
 
     public MainViewModel(
         MessageService       messageService,
-        GenericEventHandler  eventHandler,
+        ChatEventListener  chatListener,
         ICommandParser       commandParser,
         IAudioSinkFactory    sinkFactory,
         ISettingsRepository  settingsRepo,
@@ -67,7 +66,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
             SetFeedback(startupWarning, isError: true);
         
         _messageService = messageService ?? throw new ArgumentNullException(nameof(messageService));
-        _eventHandler   = eventHandler   ?? throw new ArgumentNullException(nameof(eventHandler));
+        _chatListener   = chatListener   ?? throw new ArgumentNullException(nameof(chatListener));
         _commandParser  = commandParser  ?? throw new ArgumentNullException(nameof(commandParser));
         _sinkFactory    = sinkFactory    ?? throw new ArgumentNullException(nameof(sinkFactory));
         _settingsRepo   = settingsRepo   ?? throw new ArgumentNullException(nameof(settingsRepo));
@@ -85,7 +84,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         _sourceLang = string.IsNullOrWhiteSpace(initialConfig.SourceLang) ? "en" : initialConfig.SourceLang;
         _targetLang = string.IsNullOrWhiteSpace(initialConfig.TargetLang) ? "es" : initialConfig.TargetLang;
 
-        _eventHandler.SetTrackedUser(RegisteredUser);
+        _chatListener.SetTrackedUser(RegisteredUser);
         ApplyTranslatorSettings(save: false);
 
         // Commands
@@ -144,7 +143,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         RegisteredUser = name;
         
         _messageService.RegisterUser(name);
-        _eventHandler.SetTrackedUser(name);
+        _chatListener.SetTrackedUser(name);
         
         PlayerNameInput = string.Empty;
         _ = PersistCurrentConfigAsync(); // save User config
@@ -178,7 +177,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         
         if (_listenChatMessage) filter |= MessageSourceFilter.ChatMessage;
         if (_listenChatSay)     filter |= MessageSourceFilter.ChatSay;
-        _eventHandler.SetSourceFilter(filter);
+        _chatListener.SetSourceFilter(filter);
         _ = PersistCurrentConfigAsync(); // save Filter config
     }
 

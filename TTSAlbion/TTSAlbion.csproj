@@ -16,7 +16,9 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\NetWorkLibrery\NetWorkLibrery.csproj" />
+		<ProjectReference Include="..\LibAlbionProtocol\LibAlbionProtocol.csproj" />
+		<ProjectReference Include="..\LibAlbionRouting\LibAlbionRouting.csproj" />
+		<ProjectReference Include="..\LibNetWork\LibNetWork.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>
@@ -48,6 +50,10 @@
 		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 		</None>
 		
+	</ItemGroup>
+
+	<ItemGroup>
+	  <Folder Include="Atributos\" />
 	</ItemGroup>
 
 

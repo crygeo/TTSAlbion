@@ -1,4 +1,4 @@
-using TTSAlbion.Albion;
+using LibAlbionProtocol.Models;
 using TTSAlbion.Interfaces;
 using TTSAlbion.Services.Audio;
 
