@@ -2,11 +2,11 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TTSAlbion", "TTSAlbion\TTSAlbion.csproj", "{1DC3606B-C559-4ADA-8B54-44D711BA6C85}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LibNetWork", "LibNetWork\LibNetWork.csproj", "{C44DA7BA-596F-4C85-9626-16FC85908D18}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LibAlbionProtocol", "..\LibSolutions\LibAlbionProtocol\LibAlbionProtocol.csproj", "{024CDD22-373E-482F-8735-C71C53B20558}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LibAlbionProtocol", "LibAlbionProtocol\LibAlbionProtocol.csproj", "{FD42D54F-F641-45FF-8D7F-5F26B061057B}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LibAlbionRouting", "..\LibSolutions\LibAlbionRouting\LibAlbionRouting.csproj", "{E81F2307-A568-4626-9D34-25D1507D3ADB}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LibAlbionRouting", "LibAlbionRouting\LibAlbionRouting.csproj", "{7B8EE005-041E-41A3-9B41-E2E68CCD22F8}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LibNetWork", "..\LibSolutions\LibNetWork\LibNetWork.csproj", "{12F47832-1312-4912-B28F-BD166C2ECD45}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -18,17 +18,17 @@ Global
 		{1DC3606B-C559-4ADA-8B54-44D711BA6C85}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{1DC3606B-C559-4ADA-8B54-44D711BA6C85}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{1DC3606B-C559-4ADA-8B54-44D711BA6C85}.Release|Any CPU.Build.0 = Release|Any CPU
-		{C44DA7BA-596F-4C85-9626-16FC85908D18}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{C44DA7BA-596F-4C85-9626-16FC85908D18}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{C44DA7BA-596F-4C85-9626-16FC85908D18}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{C44DA7BA-596F-4C85-9626-16FC85908D18}.Release|Any CPU.Build.0 = Release|Any CPU
-		{FD42D54F-F641-45FF-8D7F-5F26B061057B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{FD42D54F-F641-45FF-8D7F-5F26B061057B}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{FD42D54F-F641-45FF-8D7F-5F26B061057B}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{FD42D54F-F641-45FF-8D7F-5F26B061057B}.Release|Any CPU.Build.0 = Release|Any CPU
-		{7B8EE005-041E-41A3-9B41-E2E68CCD22F8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{7B8EE005-041E-41A3-9B41-E2E68CCD22F8}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{7B8EE005-041E-41A3-9B41-E2E68CCD22F8}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{7B8EE005-041E-41A3-9B41-E2E68CCD22F8}.Release|Any CPU.Build.0 = Release|Any CPU
+		{024CDD22-373E-482F-8735-C71C53B20558}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{024CDD22-373E-482F-8735-C71C53B20558}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{024CDD22-373E-482F-8735-C71C53B20558}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{024CDD22-373E-482F-8735-C71C53B20558}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E81F2307-A568-4626-9D34-25D1507D3ADB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E81F2307-A568-4626-9D34-25D1507D3ADB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E81F2307-A568-4626-9D34-25D1507D3ADB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E81F2307-A568-4626-9D34-25D1507D3ADB}.Release|Any CPU.Build.0 = Release|Any CPU
+		{12F47832-1312-4912-B28F-BD166C2ECD45}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{12F47832-1312-4912-B28F-BD166C2ECD45}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{12F47832-1312-4912-B28F-BD166C2ECD45}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{12F47832-1312-4912-B28F-BD166C2ECD45}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

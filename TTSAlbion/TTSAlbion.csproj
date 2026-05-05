@@ -15,11 +15,6 @@
 	  <None Remove="icon.png" />
 	</ItemGroup>
 
-	<ItemGroup>
-		<ProjectReference Include="..\LibAlbionProtocol\LibAlbionProtocol.csproj" />
-		<ProjectReference Include="..\LibAlbionRouting\LibAlbionRouting.csproj" />
-		<ProjectReference Include="..\LibNetWork\LibNetWork.csproj" />
-	</ItemGroup>
 
 	<ItemGroup>
 		<!-- Audio / TTS / Network -->
@@ -54,6 +49,12 @@
 
 	<ItemGroup>
 	  <Folder Include="Atributos\" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <ProjectReference Include="..\..\LibSolutions\LibAlbionProtocol\LibAlbionProtocol.csproj" />
+	  <ProjectReference Include="..\..\LibSolutions\LibAlbionRouting\LibAlbionRouting.csproj" />
+	  <ProjectReference Include="..\..\LibSolutions\LibNetWork\LibNetWork.csproj" />
 	</ItemGroup>
 
 
